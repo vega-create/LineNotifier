@@ -1,0 +1,407 @@
+import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Group, Template, Message, MessageFormData } from "@shared/schema";
+import MessageTemplateSelector from "./MessageTemplateSelector";
+import ScheduleSelector from "./ScheduleSelector";
+import { apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+
+const formSchema = z.object({
+  title: z.string().min(1, "訊息標題不能為空"),
+  content: z.string().min(1, "訊息內容不能為空"),
+  type: z.enum(["single", "periodic"]),
+  multiGroup: z.boolean().default(false),
+  groups: z.array(z.string()).min(1, "至少選擇一個群組"),
+  scheduledDate: z.date(),
+  startTime: z.string(),
+  endTime: z.string(),
+});
+
+type MessageFormProps = {
+  groups: Group[];
+  templates: Template[];
+  onSuccess?: () => void;
+};
+
+export default function MessageForm({ groups, templates, onSuccess }: MessageFormProps) {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      content: "",
+      type: "single",
+      multiGroup: false,
+      groups: ["1"], // Default to first group
+      scheduledDate: new Date(),
+      startTime: "16:00",
+      endTime: "18:00",
+    },
+  });
+
+  const watchType = form.watch("type");
+  const watchMultiGroup = form.watch("multiGroup");
+  const watchContent = form.watch("content");
+  const watchTitle = form.watch("title");
+
+  const handleTemplateSelect = (template: Template) => {
+    setSelectedTemplate(template);
+    form.setValue("title", template.name);
+    form.setValue("content", template.content);
+  };
+
+  const handleSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      // Convert form data to API format
+      const [startHour, startMinute] = data.startTime.split(":").map(Number);
+      const [endHour, endMinute] = data.endTime.split(":").map(Number);
+      
+      const scheduleDate = new Date(data.scheduledDate);
+      const scheduleTime = new Date(scheduleDate);
+      scheduleTime.setHours(startHour, startMinute, 0);
+      
+      const endTime = new Date(scheduleDate);
+      endTime.setHours(endHour, endMinute, 0);
+      
+      const messageData = {
+        title: data.title,
+        content: data.content,
+        type: data.type,
+        scheduledTime: scheduleTime.toISOString(),
+        endTime: endTime.toISOString(),
+        status: "scheduled",
+        groupIds: data.groups
+      };
+      
+      // Send message data to API
+      await apiRequest("POST", "/api/messages", messageData);
+      
+      // Reset form
+      form.reset({
+        title: "",
+        content: "",
+        type: "single",
+        multiGroup: false,
+        groups: ["1"],
+        scheduledDate: new Date(),
+        startTime: "16:00",
+        endTime: "18:00",
+      });
+      
+      // Invalidate messages cache to refresh any lists
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+
+  const handleClearForm = () => {
+    form.reset({
+      title: "",
+      content: "",
+      type: "single",
+      multiGroup: false,
+      groups: ["1"],
+      scheduledDate: new Date(),
+      startTime: "16:00",
+      endTime: "18:00",
+    });
+    setSelectedTemplate(null);
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-xl font-semibold text-gray-800">LINE訊息發送</CardTitle>
+            
+            <div className="flex items-center">
+              <div className="relative mr-2">
+                <Select defaultValue="1">
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="選擇群組" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((group) => (
+                      <SelectItem key={group.id} value={group.id.toString()}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Button>
+                <i className="fas fa-plus mr-1"></i> 新增群組
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              {/* Message Type */}
+              <div className="mb-6">
+                <h3 className="text-md font-medium text-gray-700 mb-4">訊息設定</h3>
+                
+                <div className="bg-gray-50 p-4 rounded-md mb-4">
+                  <FormLabel className="block text-sm font-medium text-gray-700 mb-2">訊息類型</FormLabel>
+                  <div className="flex">
+                    <Button
+                      type="button"
+                      variant={watchType === "single" ? "default" : "outline"}
+                      className="rounded-r-none"
+                      onClick={() => form.setValue("type", "single")}
+                    >
+                      單次發送
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={watchType === "periodic" ? "default" : "outline"}
+                      className="rounded-l-none"
+                      onClick={() => form.setValue("type", "periodic")}
+                    >
+                      週期性發送
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Group Settings */}
+                <div className="mb-4">
+                  <FormLabel className="block text-sm font-medium text-gray-700 mb-2">群組設定</FormLabel>
+                  <div className="flex items-center mb-2">
+                    <FormField
+                      control={form.control}
+                      name="multiGroup"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              id="multi-group"
+                            />
+                          </FormControl>
+                          <label 
+                            htmlFor="multi-group" 
+                            className="text-sm text-gray-700 font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            多群組模式
+                          </label>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <FormField
+                      control={form.control}
+                      name="groups"
+                      render={({ field }) => (
+                        <FormItem className="flex-grow mr-2">
+                          <FormControl>
+                            {watchMultiGroup ? (
+                              <div className="space-y-2">
+                                {groups.map((group) => (
+                                  <div key={group.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`group-${group.id}`}
+                                      checked={field.value.includes(group.id.toString())}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          field.onChange([...field.value, group.id.toString()]);
+                                        } else {
+                                          field.onChange(field.value.filter(id => id !== group.id.toString()));
+                                        }
+                                      }}
+                                    />
+                                    <label
+                                      htmlFor={`group-${group.id}`}
+                                      className="text-sm cursor-pointer"
+                                    >
+                                      {group.name}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <Select
+                                value={field.value[0]}
+                                onValueChange={(value) => field.onChange([value])}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="選擇群組" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {groups.map((group) => (
+                                    <SelectItem key={group.id} value={group.id.toString()}>
+                                      {group.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="button">
+                      <i className="fas fa-plus mr-1"></i> 新增群組
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Message Template */}
+                <MessageTemplateSelector 
+                  templates={templates} 
+                  selectedTemplate={selectedTemplate}
+                  onSelectTemplate={handleTemplateSelect}
+                />
+              </div>
+
+              {/* Message Content */}
+              <div className="mb-6">
+                <h3 className="text-md font-medium text-gray-700 mb-4">訊息內容</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem className="mb-4">
+                      <FormLabel>訊息標題</FormLabel>
+                      <FormControl>
+                        <Input placeholder="輸入訊息標題" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>訊息內容</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="輸入訊息內容" 
+                          className="min-h-32 resize-none"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Schedule Settings */}
+              <ScheduleSelector form={form} />
+
+              {/* Action buttons */}
+              <div className="flex justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClearForm}
+                >
+                  清除內容
+                </Button>
+                
+                <div className="flex">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-r-none"
+                    onClick={() => setIsPreviewOpen(true)}
+                  >
+                    預覽
+                  </Button>
+                  <Button 
+                    type="submit"
+                    className="bg-green-500 hover:bg-green-600 rounded-l-none"
+                  >
+                    發送至LINE群組
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>訊息預覽</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium">訊息標題</h3>
+              <p className="text-sm">{watchTitle}</p>
+            </div>
+            
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium">發送對象</h3>
+              <p className="text-sm">
+                {form.getValues("groups")
+                  .map(id => {
+                    const group = groups.find(g => g.id.toString() === id);
+                    return group ? group.name : "";
+                  })
+                  .filter(Boolean)
+                  .join(", ")}
+              </p>
+            </div>
+            
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium">LINE訊息內容</h3>
+              <div className="bg-[#F0F0F0] p-4 rounded-lg space-y-2">
+                <p className="text-sm whitespace-pre-line">{watchContent}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium">排程時間</h3>
+              <p className="text-sm">
+                {form.getValues("scheduledDate").toLocaleDateString()} {form.getValues("startTime")}
+              </p>
+            </div>
+            
+            <DialogFooter>
+              <Button onClick={() => setIsPreviewOpen(false)}>關閉</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
