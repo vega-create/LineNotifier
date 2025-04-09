@@ -269,6 +269,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 輔助函數：格式化台灣時間（GMT+8）
+  function formatTaiwanTime(date: Date): string {
+    // 複製日期對象以避免修改原始日期
+    const taiwanDate = new Date(date);
+    // 將UTC時間轉換為台灣時間（UTC+8）
+    taiwanDate.setHours(taiwanDate.getHours() + 8);
+    
+    // 格式化為 YYYY/MM/DD HH:MM:SS 台灣時間
+    const year = taiwanDate.getUTCFullYear();
+    const month = String(taiwanDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(taiwanDate.getUTCDate()).padStart(2, '0');
+    const hours = String(taiwanDate.getUTCHours()).padStart(2, '0');
+    const minutes = String(taiwanDate.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(taiwanDate.getUTCSeconds()).padStart(2, '0');
+    
+    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds} 台灣時間`;
+  }
+
   // Helper function to send LINE messages
   async function sendLineMessage(
     lineGroupId: string, 
@@ -421,6 +439,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // 在排程訊息中添加台灣時間
+      if (!finalContent.includes('台灣時間')) {
+        const now = new Date();
+        const taiwanTimeStr = formatTaiwanTime(now);
+        finalContent += `\n\n發送時間: ${taiwanTimeStr}`;
+      }
+      
       // Send message to all groups
       const results = await Promise.all(
         validGroups.map(async (group) => {
@@ -542,11 +567,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`測試發送訊息到群組: ${group.name} (${group.lineId})`);
-      console.log(`訊息內容: ${content}`);
+      
+      // 添加台灣時間到訊息內容
+      const now = new Date();
+      const taiwanTimeStr = formatTaiwanTime(now);
+      const finalContent = content + (content.includes('台灣時間') ? '' : ` - ${taiwanTimeStr}`);
+      
+      console.log(`訊息內容: ${finalContent}`);
       
       // 使用 LINE API 發送訊息
       try {
-        const result = await sendLineMessage(group.lineId, content);
+        const result = await sendLineMessage(group.lineId, finalContent);
         
         return res.json({ 
           success: true, 
