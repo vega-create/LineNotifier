@@ -27,13 +27,15 @@ export default function ScheduleManagement() {
     queryKey: ["/api/groups"],
   });
 
-  // Fetch messages
+  // Fetch messages with shorter refetch interval to see changes more quickly
   const { data: messages, isLoading: isLoadingMessages } = useQuery<Message[]>({
     queryKey: ["/api/messages"],
+    refetchInterval: 5000, // 每5秒重新獲取一次數據，確保最新的排程狀態
   });
 
-  // Count sent messages
+  // Count sent messages and scheduled messages
   const sentMessages = messages?.filter(message => message.status === "sent") || [];
+  const scheduledMessages = messages?.filter(message => message.status === "scheduled") || [];
   
   // Handle clearing sent messages
   const handleClearSentMessages = async () => {
@@ -209,6 +211,23 @@ export default function ScheduleManagement() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* 顯示等待自動發送的訊息 */}
+      {scheduledMessages.length > 0 && (
+        <Card className="bg-blue-50 border-blue-200 mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <h3 className="font-medium text-blue-900">有訊息正在排隊等待發送</h3>
+                <p className="text-sm text-blue-700">
+                  共有 {scheduledMessages.length} 條訊息將在約3分鐘內自動發送。系統將在發送後自動移除這些訊息。
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* 列表視圖 */}
