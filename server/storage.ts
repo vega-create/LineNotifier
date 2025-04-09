@@ -99,7 +99,7 @@ export class MemStorage implements IStorage {
     const defaultMessages: InsertMessage[] = [
       {
         title: "會議提醒",
-        content: "親愛的團隊成員，請記得參加今天的會議。",
+        content: "親愛的團隊成員，請記得參加今天 14:00 的專案會議。地點：台北市松山區南京東路三段275號。",
         scheduledTime: now,
         endTime: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2 hours later
         type: "single",
@@ -110,7 +110,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "專案進度詢問",
-        content: "xxx 客戶的狀況如何了？",
+        content: "OOO客戶的網站專案進度如何？是否已完成首頁設計稿？請回報最新進度，謝謝。",
         scheduledTime: yesterday,
         endTime: new Date(yesterday.getTime() + 1 * 60 * 60 * 1000), // 1 hour later
         type: "single",
@@ -121,7 +121,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "收款通知",
-        content: "親愛的客戶您好，這個月的費用（NT$5000）。請於5日前匯款至\n彰化銀行 009\n帳號：96038605494000\n戶名：智慧媽咪國際有限公司\n\n發票將於收到款項後提供",
+        content: "親愛的客戶您好，\n這是7月份的服務費用通知。請於5日前匯款至：\n\n彰化銀行 009\n帳號：96038605494000\n戶名：智慧媽咪國際有限公司\n\n發票將於收到款項後提供，感謝您的合作。",
         scheduledTime: new Date(yesterday.setDate(yesterday.getDate() - 3)),
         endTime: new Date(yesterday.getTime() + 30 * 60 * 1000), // 30 min later
         type: "single",
@@ -132,7 +132,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "入帳通知",
-        content: "我們已收到您的款項（US$1500）。",
+        content: "親愛的客戶您好，\n我們已收到您的 6 月份款項。\n感謝您的支持！如有任何問題，歡迎隨時聯繫我們。",
         scheduledTime: new Date(now.setDate(now.getDate() - 5)),
         endTime: new Date(now.getTime() + 1 * 60 * 60 * 1000), // 1 hour later
         type: "single",
