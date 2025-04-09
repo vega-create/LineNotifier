@@ -6,7 +6,8 @@ import {
   insertGroupSchema,
   insertTemplateSchema,
   insertMessageSchema,
-  insertSettingsSchema
+  insertSettingsSchema,
+  Group
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -171,15 +172,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return;
             }
             
-            // 發送訊息，使用已有的/send-message API路由
-            const sendResponse = await fetch(`http://localhost:5000/api/send-message`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ messageId: message.id })
-            });
+            // 直接調用發送訊息的功能，而不是通過HTTP請求
+            console.log(`直接調用發送訊息功能 (ID: ${message.id})`);
             
-            const responseData = await sendResponse.json();
-            console.log(`自動發送訊息結果:`, responseData);
+            try {
+              // 獲取訊息詳情
+              const messageToSend = await storage.getMessage(message.id);
+              if (!messageToSend) {
+                console.log(`訊息 ID: ${message.id} 無法獲取，跳過發送`);
+                return;
+              }
+              
+              // 獲取LINE API設定
+              const settings = await storage.getSettings();
+              if (!settings || !settings.lineApiToken) {
+                console.error("無法獲取LINE API設定，跳過發送");
+                return;
+              }
+              
+              // 獲取群組資訊
+              const groups = await Promise.all(
+                messageToSend.groupIds.map(async groupId => {
+                  return await storage.getGroup(parseInt(groupId));
+                })
+              );
+              
+              const validGroups = groups.filter(g => g !== undefined) as Group[];
+              
+              if (validGroups.length === 0) {
+                console.error("找不到有效的群組，跳過發送");
+                return;
+              }
+              
+              // 格式化訊息內容
+              let finalContent = messageToSend.content;
+              
+              if (messageToSend.currency && messageToSend.amount) {
+                let currencySymbol = "";
+                if (messageToSend.currency === "TWD") currencySymbol = "NT$";
+                else if (messageToSend.currency === "USD") currencySymbol = "US$";
+                else if (messageToSend.currency === "AUD") currencySymbol = "AU$";
+                
+                if (!finalContent.includes(`${currencySymbol}${messageToSend.amount}`)) {
+                  finalContent += `\n\n金額: ${currencySymbol}${messageToSend.amount}`;
+                }
+              }
+              
+              // 進行分段處理
+              finalContent = finalContent.replace(/。(?!\n)/g, "。\n");
+              
+              // 發送訊息到所有群組
+              let allSuccess = true;
+              for (const group of validGroups) {
+                try {
+                  console.log(`嘗試發送訊息到群組: ${group.name} (ID: ${group.lineId})`);
+                  console.log(`使用的訊息內容: ${finalContent}`);
+                  
+                  // 使用實際的LINE API發送訊息
+                  await sendLineMessage(
+                    group.lineId,
+                    finalContent,
+                    settings.lineApiToken || ""
+                  );
+                  
+                  console.log(`發送成功到群組: ${group.name}`);
+                } catch (error) {
+                  console.error(`發送到群組 ${group.name} 失敗:`, error);
+                  allSuccess = false;
+                }
+              }
+              
+              // 更新訊息狀態
+              const newStatus = allSuccess ? "sent" : "partial";
+              await storage.updateMessage(message.id, { status: newStatus });
+              
+              // 如果成功發送，則刪除該訊息
+              if (allSuccess) {
+                console.log(`訊息 ID: ${message.id} 已成功發送，現在將其刪除`);
+                const deleteResult = await storage.deleteMessage(message.id);
+                console.log(`Message ${message.id} was successfully sent and deleted (result: ${deleteResult})`);
+              }
+              
+              console.log(`自動發送訊息完成 (ID: ${message.id}, 結果: ${allSuccess ? '成功' : '部分失敗'})`);
+            } catch (error) {
+              console.error(`發送訊息時發生錯誤 (ID: ${message.id}):`, error);
+            }
+            
+            // 因為我們直接調用函數而不是發送HTTP請求，所以不需要解析響應
           } catch (autoSendError) {
             console.error(`自動發送訊息失敗 (ID: ${message.id}):`, autoSendError);
           }

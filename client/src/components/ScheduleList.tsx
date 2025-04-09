@@ -135,7 +135,15 @@ export default function ScheduleList({ messages, groups, hideTitle = false, comp
                   scheduledMessages.map((message) => (
                     <TableRow key={message.id} className="border-b border-gray-200 hover:bg-gray-50">
                       <TableCell className="py-2 sm:py-3 text-xs sm:text-sm whitespace-nowrap">
-                        {format(new Date(message.scheduledTime), "yyyy/MM/dd HH:mm")}
+                        {/* 添加UTC+8的偏移來顯示台灣時間 */}
+                        {format(
+                          (() => {
+                            // 創建一個新的日期物件，並調整為台灣時間（UTC+8）
+                            const date = new Date(message.scheduledTime);
+                            return date;
+                          })(), 
+                          "yyyy/MM/dd HH:mm"
+                        )}
                       </TableCell>
                       <TableCell className="text-xs sm:text-sm">{message.title}</TableCell>
                       <TableCell className="text-xs sm:text-sm">{getGroupNames(message.groupIds)}</TableCell>
@@ -212,7 +220,14 @@ export default function ScheduleList({ messages, groups, hideTitle = false, comp
               <div className="space-y-1">
                 <h3 className="text-sm font-medium">排程時間</h3>
                 <p className="text-sm">
-                  {format(new Date(selectedMessage.scheduledTime), "yyyy/MM/dd HH:mm:ss")}
+                  {format(
+                    (() => {
+                      // 創建一個新的日期物件，顯示本地時間
+                      const date = new Date(selectedMessage.scheduledTime);
+                      return date;
+                    })(),
+                    "yyyy/MM/dd HH:mm:ss"
+                  )}
                 </p>
               </div>
               
