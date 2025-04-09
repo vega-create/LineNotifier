@@ -44,6 +44,7 @@ type MessageFormProps = {
 export default function MessageForm({ groups, templates, onSuccess }: MessageFormProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -203,7 +204,7 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
                 </Select>
               </div>
               
-              <Button>
+              <Button onClick={() => setIsAddGroupModalOpen(true)}>
                 <i className="fas fa-plus mr-1"></i> 新增群組
               </Button>
             </div>
@@ -321,7 +322,7 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
                         </FormItem>
                       )}
                     />
-                    <Button type="button">
+                    <Button type="button" onClick={() => setIsAddGroupModalOpen(true)}>
                       <i className="fas fa-plus mr-1"></i> 新增群組
                     </Button>
                   </div>
@@ -563,6 +564,44 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
                 }}
               >
                 新增按鈕
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* 新增群組對話框 */}
+      <Dialog open={isAddGroupModalOpen} onOpenChange={setIsAddGroupModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>新增LINE群組</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">群組名稱</label>
+              <Input placeholder="例：客戶群組A" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">LINE群組ID</label>
+              <Input placeholder="例：C24f17b1dc3008dc83f4c60bfe80f0db0" />
+              <p className="text-xs text-gray-500 mt-1">請從LINE開發者頁面獲取群組ID</p>
+            </div>
+
+            <DialogFooter className="flex justify-between gap-2">
+              <Button variant="outline" onClick={() => setIsAddGroupModalOpen(false)}>
+                取消
+              </Button>
+              <Button 
+                onClick={() => {
+                  // 這裡會新增群組
+                  setIsAddGroupModalOpen(false);
+                  // 重新整理群組列表
+                  queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
+                }}
+              >
+                新增群組
               </Button>
             </DialogFooter>
           </div>

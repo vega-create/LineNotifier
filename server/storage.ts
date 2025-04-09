@@ -58,14 +58,14 @@ export class MemStorage implements IStorage {
   private initializeDefaultData() {
     // Add default groups
     const defaultGroups: InsertGroup[] = [
-      { name: "小幫手", lineId: "C24f17b1dc3008dc83f4c60bfe80f0db0" },
-      { name: "Anna群", lineId: "Cc01842ccc97459ae901b6d4779d8f345" },
-      { name: "雅涵群", lineId: "C03ac887829a325a840fc462b91fcbbd7" },
-      { name: "架站工作室（文良）", lineId: "Ce22eadb63c13baf632b0c7d5ac5536f4" },
-      { name: "網站工程師（佑展工程師）", lineId: "Cc4237c4173ca718ab0e30eae2e7ca529" },
-      { name: "Tina群", lineId: "C164037891996ce50ce13c0cba24e154f" },
-      { name: "網站設計師（土棠）", lineId: "Cf1b26d83e385242632b3970b3f8c622f" },
-      { name: "工程師組", lineId: "C536c0214d33c80eeac1b084953dd168b" }
+      { name: "顧問小幫手", lineId: "C24f17b1dc3008dc83f4c60bfe80f0db0" },
+      { name: "Anna客戶群", lineId: "Cc01842ccc97459ae901b6d4779d8f345" },
+      { name: "雅涵客戶群", lineId: "C03ac887829a325a840fc462b91fcbbd7" },
+      { name: "威爾架站工作室", lineId: "Ce22eadb63c13baf632b0c7d5ac5536f4" },
+      { name: "佑展工程師團隊", lineId: "Cc4237c4173ca718ab0e30eae2e7ca529" },
+      { name: "Tina國際客戶群", lineId: "C164037891996ce50ce13c0cba24e154f" },
+      { name: "土棠設計團隊", lineId: "Cf1b26d83e385242632b3970b3f8c622f" },
+      { name: "智慧媽咪技術團隊", lineId: "C536c0214d33c80eeac1b084953dd168b" }
     ];
 
     defaultGroups.forEach(group => {
