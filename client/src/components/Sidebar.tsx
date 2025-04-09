@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { FiMessageSquare, FiCalendar, FiClock, FiUsers, FiFileText, FiSettings, FiMenu } from "react-icons/fi";
+import { FiMessageSquare, FiCalendar, FiClock, FiUsers, FiFileText, FiSettings, FiMenu, FiSend } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { Settings } from "@shared/schema";
@@ -43,6 +43,11 @@ export default function Sidebar({ currentPath }: SidebarProps) {
       name: "訊息模板",
       path: "/templates",
       icon: <FiFileText className="h-5 w-5" />,
+    },
+    {
+      name: "測試發送",
+      path: "/test-send",
+      icon: <FiSend className="h-5 w-5" />,
     },
     {
       name: "系統設定",

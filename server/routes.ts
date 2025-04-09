@@ -506,6 +506,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 測試發送LINE訊息
+  router.post("/test-send", async (req: Request, res: Response) => {
+    try {
+      const { groupId, content } = req.body;
+      
+      if (!groupId || !content) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "缺少群組ID或訊息內容" 
+        });
+      }
+      
+      // 獲取群組訊息
+      const group = await storage.getGroup(Number(groupId));
+      
+      if (!group) {
+        return res.status(404).json({ 
+          success: false, 
+          error: `找不到 ID 為 ${groupId} 的群組` 
+        });
+      }
+      
+      console.log(`測試發送訊息到群組: ${group.name} (${group.lineId})`);
+      console.log(`訊息內容: ${content}`);
+      
+      // 使用 LINE API 發送訊息
+      const result = await sendLineMessage(group.lineId, content);
+      
+      return res.json({ 
+        success: true, 
+        message: `已發送訊息到群組: ${group.name}`,
+        result,
+        group: {
+          id: group.id,
+          name: group.name,
+          lineId: group.lineId
+        }
+      });
+    } catch (error) {
+      console.error("測試發送失敗:", error);
+      return res.status(500).json({ 
+        success: false, 
+        error: `發送失敗: ${error instanceof Error ? error.message : String(error)}` 
+      });
+    }
+  });
+  
   // 測試 LINE API 連接
   router.post("/test-line-connection", async (req: Request, res: Response) => {
     try {

@@ -76,5 +76,11 @@ export const api = {
   // Send message
   sendMessage: async (messageId: number): Promise<void> => {
     await apiRequest("POST", "/api/send-message", { messageId });
+  },
+  
+  // 測試發送功能 - 直接發送訊息不經過排程
+  testSend: async (groupId: number, content: string): Promise<any> => {
+    const res = await apiRequest("POST", "/api/test-send", { groupId, content });
+    return await res.json();
   }
 };

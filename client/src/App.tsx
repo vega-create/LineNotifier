@@ -10,6 +10,7 @@ import MessageHistory from "./pages/MessageHistory";
 import GroupManagement from "./pages/GroupManagement";
 import TemplateManagement from "./pages/TemplateManagement";
 import Settings from "./pages/Settings";
+import TestSend from "./pages/TestSend";
 
 function Router() {
   const [location] = useLocation();
@@ -25,6 +26,7 @@ function Router() {
           <Route path="/groups" component={GroupManagement} />
           <Route path="/templates" component={TemplateManagement} />
           <Route path="/settings" component={Settings} />
+          <Route path="/test-send" component={TestSend} />
           <Route component={NotFound} />
         </Switch>
       </main>
