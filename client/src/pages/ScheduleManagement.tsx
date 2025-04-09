@@ -10,12 +10,17 @@ import { format } from "date-fns";
 import { zhTW } from "date-fns/locale";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useMediaQuery } from "react-responsive";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, Trash2 } from "lucide-react";
 
 export default function ScheduleManagement() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"calendar" | "list">("calendar");
+  const [isClearing, setIsClearing] = useState(false);
   const isMobile = useIsMobile();
   const isTablet = useMediaQuery({ minWidth: 768, maxWidth: 1023 });
+  const { toast } = useToast();
   
   // Fetch groups
   const { data: groups, isLoading: isLoadingGroups } = useQuery<Group[]>({
@@ -26,6 +31,63 @@ export default function ScheduleManagement() {
   const { data: messages, isLoading: isLoadingMessages } = useQuery<Message[]>({
     queryKey: ["/api/messages"],
   });
+
+  // Count sent messages
+  const sentMessages = messages?.filter(message => message.status === "sent") || [];
+  
+  // Handle clearing sent messages
+  const handleClearSentMessages = async () => {
+    if (!confirm("確定要刪除所有已發送的訊息嗎？此操作無法復原。")) return;
+    
+    setIsClearing(true);
+    let successCount = 0;
+    let errorCount = 0;
+    
+    try {
+      // Process all sent messages in parallel
+      await Promise.all(
+        sentMessages.map(async (message) => {
+          try {
+            await apiRequest("DELETE", `/api/messages/${message.id}`);
+            successCount++;
+          } catch (error) {
+            console.error(`Failed to delete message ${message.id}:`, error);
+            errorCount++;
+          }
+        })
+      );
+      
+      // Show success message
+      if (successCount > 0) {
+        toast({
+          title: "清除成功",
+          description: `已成功刪除 ${successCount} 條已發送的訊息${errorCount > 0 ? `，${errorCount} 條刪除失敗` : ''}。`,
+        });
+      } else if (errorCount > 0) {
+        toast({
+          title: "清除失敗",
+          description: `所有訊息刪除失敗，請稍後再試。`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "無訊息可清除",
+          description: "沒有找到已發送的訊息。",
+        });
+      }
+      
+      // Refresh the message list
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    } catch (error) {
+      toast({
+        title: "操作失敗",
+        description: "清除訊息時發生錯誤，請再試一次。",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   const filteredMessages = messages?.filter(message => {
     if (!selectedDate) return true;
@@ -66,29 +128,46 @@ export default function ScheduleManagement() {
 
   return (
     <div className="space-y-6">
-      {/* 視圖選擇 */}
+      {/* 視圖選擇和操作按鈕 */}
       <div className={`flex ${isMobile ? "flex-col" : "justify-between"} items-center gap-4`}>
         <h1 className="text-2xl font-semibold flex items-center">
           <i className="fas fa-calendar-alt mr-2 text-primary"></i> 排程管理
         </h1>
-        <Tabs defaultValue="calendar" className="w-auto">
-          <TabsList>
-            <TabsTrigger 
-              value="calendar" 
-              onClick={() => setView("calendar")}
-              className={view === "calendar" ? "bg-primary text-white" : ""}
+        
+        <div className="flex items-center gap-4">
+          {/* 清除已發送訊息按鈕 */}
+          {sentMessages.length > 0 && (
+            <Button 
+              variant="outline" 
+              size={isMobile ? "sm" : "default"}
+              onClick={handleClearSentMessages}
+              disabled={isClearing}
+              className="flex items-center gap-1"
             >
-              日曆檢視
-            </TabsTrigger>
-            <TabsTrigger 
-              value="list" 
-              onClick={() => setView("list")}
-              className={view === "list" ? "bg-primary text-white" : ""}
-            >
-              列表檢視
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+              <Trash2 className="h-4 w-4" />
+              清除已發送訊息 {sentMessages.length > 0 && `(${sentMessages.length})`}
+            </Button>
+          )}
+          
+          <Tabs defaultValue="calendar" className="w-auto">
+            <TabsList>
+              <TabsTrigger 
+                value="calendar" 
+                onClick={() => setView("calendar")}
+                className={view === "calendar" ? "bg-primary text-white" : ""}
+              >
+                日曆檢視
+              </TabsTrigger>
+              <TabsTrigger 
+                value="list" 
+                onClick={() => setView("list")}
+                className={view === "list" ? "bg-primary text-white" : ""}
+              >
+                列表檢視
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {/* 日曆視圖 */}

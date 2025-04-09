@@ -391,27 +391,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSuccessful = results.every(r => r.success);
       const newStatus = allSuccessful ? "sent" : "partial";
       
-      // If message was successfully sent, delete it
+      // If message was successfully sent, update status or delete it
       let response;
       if (allSuccessful) {
-        // Delete the message if successfully sent
-        await storage.deleteMessage(message.id);
-        response = { 
-          success: true, 
-          deleted: true,
-          results
-        };
+        try {
+          // Update message status to "sent"
+          const updatedMessage = await storage.updateMessage(message.id, {
+            status: "sent"
+          });
+          
+          console.log(`Message ${message.id} was successfully sent and marked as sent`);
+          
+          // For now, we'll update status instead of deleting to track history
+          response = { 
+            success: true, 
+            message: updatedMessage,
+            results
+          };
+        } catch (err) {
+          console.error(`Error updating message status: ${err}`);
+          response = { 
+            success: true, 
+            error: `訊息發送成功但更新狀態失敗: ${err}`,
+            results
+          };
+        }
       } else {
         // If not fully successful, just update status
-        const updatedMessage = await storage.updateMessage(message.id, {
-          status: newStatus
-        });
-        
-        response = { 
-          success: false, 
-          message: updatedMessage,
-          results
-        };
+        try {
+          const updatedMessage = await storage.updateMessage(message.id, {
+            status: newStatus
+          });
+          
+          response = { 
+            success: false, 
+            message: updatedMessage,
+            results
+          };
+        } catch (err) {
+          console.error(`Error updating message status to ${newStatus}: ${err}`);
+          response = { 
+            success: false, 
+            error: `更新訊息狀態失敗: ${err}`,
+            results
+          };
+        }
       }
       
       res.json(response);
