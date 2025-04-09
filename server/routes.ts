@@ -417,13 +417,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // 檢查是否應該發送（根據週期性類型判斷）
           let shouldSend = false;
           
-          // 從排程時間獲取小時和分鐘，作為每天發送的時間點
-          const scheduledHour = scheduledTime.getHours();
-          const scheduledMinute = scheduledTime.getMinutes();
+          // 將排程時間和當前時間轉換為台灣時間（UTC+8）
+          const taiwanScheduledTime = new Date(scheduledTime);
+          taiwanScheduledTime.setHours(taiwanScheduledTime.getHours() + 8);
           
-          // 當前時間的小時和分鐘
-          const currentHour = now.getHours();
-          const currentMinute = now.getMinutes();
+          const taiwanNow = new Date(now);
+          taiwanNow.setHours(taiwanNow.getHours() + 8);
+          
+          // 從排程時間獲取台灣時間的小時和分鐘，作為每天發送的時間點
+          const scheduledHour = taiwanScheduledTime.getUTCHours();
+          const scheduledMinute = taiwanScheduledTime.getUTCMinutes();
+          
+          // 當前台灣時間的小時和分鐘
+          const currentHour = taiwanNow.getUTCHours();
+          const currentMinute = taiwanNow.getUTCMinutes();
           
           console.log(`檢查週期性訊息 ID: ${message.id}, 標題: ${message.title}`);
           console.log(`上次發送時間: ${lastSent.toISOString()}`);
@@ -433,51 +440,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           switch (message.recurringType) {
             case "daily":
-              // 如果當前時間與設定時間相符（小時和分鐘），且上次發送不是今天
+              // 使用台灣時間判斷，如果當前時間與設定時間相符（小時和分鐘），且上次發送不是今天
+              const taiwanLastSent = new Date(lastSent);
+              taiwanLastSent.setHours(taiwanLastSent.getHours() + 8);
+              
               if (currentHour === scheduledHour && 
                   currentMinute >= scheduledMinute && 
                   currentMinute < scheduledMinute + 5 && // 5分鐘內為有效執行時間
-                  (lastSent.getDate() !== now.getDate() || 
-                   lastSent.getMonth() !== now.getMonth() || 
-                   lastSent.getFullYear() !== now.getFullYear())) {
+                  (taiwanLastSent.getUTCDate() !== taiwanNow.getUTCDate() || 
+                   taiwanLastSent.getUTCMonth() !== taiwanNow.getUTCMonth() || 
+                   taiwanLastSent.getUTCFullYear() !== taiwanNow.getUTCFullYear())) {
                 shouldSend = true;
                 console.log(`每日訊息該發送了: ${message.title}`);
               }
               break;
               
             case "weekly":
-              // 如果當前時間與設定時間相符，且是同一個星期幾，且上次發送不是本週
+              // 使用台灣時間判斷，如果當前時間與設定時間相符，且是同一個星期幾，且上次發送不是本週
+              // 確保上次發送時間轉換為台灣時間
+              const taiwanLastSentWeekly = new Date(lastSent);
+              taiwanLastSentWeekly.setHours(taiwanLastSentWeekly.getHours() + 8);
+              
               if (currentHour === scheduledHour && 
                   currentMinute >= scheduledMinute && 
                   currentMinute < scheduledMinute + 5 &&
-                  now.getDay() === scheduledTime.getDay() && // 同一個星期幾
-                  (now.getTime() - lastSent.getTime() > 6 * 24 * 60 * 60 * 1000)) { // 至少6天前發送的
+                  taiwanNow.getUTCDay() === taiwanScheduledTime.getUTCDay() && // 同一個星期幾
+                  (taiwanNow.getTime() - taiwanLastSentWeekly.getTime() > 6 * 24 * 60 * 60 * 1000)) { // 至少6天前發送的
                 shouldSend = true;
                 console.log(`每週訊息該發送了: ${message.title}`);
               }
               break;
               
             case "monthly":
-              // 如果當前時間與設定時間相符，且是同一個月份日期，且上次發送不是本月
+              // 使用台灣時間判斷，如果當前時間與設定時間相符，且是同一個月份日期，且上次發送不是本月
+              // 確保上次發送時間轉換為台灣時間
+              const taiwanLastSentMonthly = new Date(lastSent);
+              taiwanLastSentMonthly.setHours(taiwanLastSentMonthly.getHours() + 8);
+              
               if (currentHour === scheduledHour && 
                   currentMinute >= scheduledMinute && 
                   currentMinute < scheduledMinute + 5 &&
-                  now.getDate() === scheduledTime.getDate() && // 同一個月份日期
-                  (now.getMonth() !== lastSent.getMonth() || 
-                   now.getFullYear() !== lastSent.getFullYear())) {
+                  taiwanNow.getUTCDate() === taiwanScheduledTime.getUTCDate() && // 同一個月份日期
+                  (taiwanNow.getUTCMonth() !== taiwanLastSentMonthly.getUTCMonth() || 
+                   taiwanNow.getUTCFullYear() !== taiwanLastSentMonthly.getUTCFullYear())) {
                 shouldSend = true;
                 console.log(`每月訊息該發送了: ${message.title}`);
               }
               break;
               
             case "yearly":
-              // 如果當前時間與設定時間相符，且是同一個月份和日期，且上次發送不是今年
+              // 使用台灣時間判斷，如果當前時間與設定時間相符，且是同一個月份和日期，且上次發送不是今年
+              // 確保上次發送時間轉換為台灣時間
+              const taiwanLastSentYearly = new Date(lastSent);
+              taiwanLastSentYearly.setHours(taiwanLastSentYearly.getHours() + 8);
+              
               if (currentHour === scheduledHour && 
                   currentMinute >= scheduledMinute && 
                   currentMinute < scheduledMinute + 5 &&
-                  now.getDate() === scheduledTime.getDate() && 
-                  now.getMonth() === scheduledTime.getMonth() && // 同一個月份和日期
-                  now.getFullYear() !== lastSent.getFullYear()) { // 不是今年發送的
+                  taiwanNow.getUTCDate() === taiwanScheduledTime.getUTCDate() && 
+                  taiwanNow.getUTCMonth() === taiwanScheduledTime.getUTCMonth() && // 同一個月份和日期
+                  taiwanNow.getUTCFullYear() !== taiwanLastSentYearly.getUTCFullYear()) { // 不是今年發送的
                 shouldSend = true;
                 console.log(`每年訊息該發送了: ${message.title}`);
               }
