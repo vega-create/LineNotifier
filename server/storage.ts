@@ -77,10 +77,10 @@ export class MemStorage implements IStorage {
       { name: "自訂", content: "", type: "custom" },
       { name: "會議提醒", content: "【每日提醒】 明天早上開會囉！\n時間點：每週四 早上 10:00-11:00\n會議連結為：https://meet.google.com/wta-wwbd-yiw\n請填寫會議表單：https://mommystartup.work/開會表單\n專案表模板（請建立副本後再製作）：https://mommystartup.work/專案模板\n請確認報告內容：\n0.其他週表單填寫\n1.最後一週專案計畫進度與成效\n2.本週需要大家協助的地方", type: "meeting" },
       { name: "放假通知", content: "各位同仁好，\n智慧媽咪將於 5/1 勞動節放假一天，5/2 正常上班。\n如有緊急事項請聯繫主管。\n祝大家連假愉快！", type: "holiday" },
-      { name: "專案進度詢問", content: "OOO客戶的網站專案進度如何？是否已完成首頁設計稿？請回報最新進度，謝謝。", type: "project" },
+      { name: "專案進度詢問", content: "親愛的團隊成員：\n\nOOO客戶的網站專案進度如何？\n是否已完成首頁設計稿？\n請回報最新進度，謝謝。", type: "project" },
       { name: "入帳通知", content: "親愛的客戶您好，\n我們已收到您的 6 月份款項。\n感謝您的支持！如有任何問題，歡迎隨時聯繫我們。", type: "payment" },
       { name: "發票寄送通知", content: "親愛的客戶您好，\n您的電子發票（FY-12345678）已寄至您的電子郵件信箱，請查收。\n如有任何問題，歡迎隨時聯繫我們。", type: "invoice" },
-      { name: "自我介紹", content: "您好，我是智慧媽咪LINE通知系統，負責提醒各項事項，包含：會議通知、請款、入款、發票等寄送通知。", type: "introduction" },
+      { name: "自我介紹", content: "您好，\n\n我是智慧媽咪LINE通知系統，\n負責提醒各項事項，包含：\n會議通知、請款、入款、發票等寄送通知。", type: "introduction" },
       { name: "收款通知", content: "親愛的客戶您好，\n這是7月份的服務費用通知。請於5日前匯款至：\n\n彰化銀行 009\n帳號：96038605494000\n戶名：智慧媽咪國際有限公司\n\n發票將於收到款項後提供，感謝您的合作。", type: "payment" }
     ];
 
@@ -88,14 +88,9 @@ export class MemStorage implements IStorage {
       this.createTemplate(template);
     });
 
-    // Add sample messages
+    // Add sample message
     const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
     
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-
     const defaultMessages: InsertMessage[] = [
       {
         title: "會議提醒",
@@ -104,42 +99,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours later
         type: "single",
         status: "scheduled",
-        groupIds: ["1"], // 小幫手群組
-        currency: null,
-        amount: null
-      },
-      {
-        title: "專案進度詢問",
-        content: "OOO客戶的網站專案進度如何？是否已完成首頁設計稿？請回報最新進度，謝謝。",
-        scheduledTime: yesterday.toISOString(),
-        endTime: new Date(yesterday.getTime() + 1 * 60 * 60 * 1000).toISOString(), // 1 hour later
-        type: "single",
-        status: "sent",
-        groupIds: ["8"], // 工程師組
-        currency: null,
-        amount: null
-      },
-      {
-        title: "收款通知",
-        content: "親愛的客戶您好，\n這是7月份的服務費用通知。請於5日前匯款至：\n\n彰化銀行 009\n帳號：96038605494000\n戶名：智慧媽咪國際有限公司\n\n發票將於收到款項後提供，感謝您的合作。",
-        scheduledTime: new Date(yesterday.setDate(yesterday.getDate() - 3)).toISOString(),
-        endTime: new Date(yesterday.getTime() + 30 * 60 * 1000).toISOString(), // 30 min later
-        type: "single",
-        status: "sent",
         groupIds: ["2"], // Anna群
-        currency: "TWD",
-        amount: "5000"
-      },
-      {
-        title: "入帳通知",
-        content: "親愛的客戶您好，\n我們已收到您的 6 月份款項。\n感謝您的支持！如有任何問題，歡迎隨時聯繫我們。",
-        scheduledTime: new Date(now.setDate(now.getDate() - 5)).toISOString(),
-        endTime: new Date(now.getTime() + 1 * 60 * 60 * 1000).toISOString(), // 1 hour later
-        type: "single",
-        status: "sent",
-        groupIds: ["6"], // Tina群
-        currency: "USD",
-        amount: "1500"
+        currency: null,
+        amount: null
       }
     ];
 
