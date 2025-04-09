@@ -141,8 +141,7 @@ export default function SettingsPage() {
                         <Input 
                           placeholder="輸入您的LINE Channel Secret" 
                           type="password"
-                          {...field} 
-                          defaultValue="3525c42f23e48cb7b2f1497e59c1a577"
+                          {...field}
                         />
                       </FormControl>
                       <FormDescription>
@@ -164,7 +163,6 @@ export default function SettingsPage() {
                           placeholder="輸入您的LINE Channel Access Token" 
                           type="password"
                           {...field}
-                          defaultValue="H7gLbnasL+A+fTIfAfdmDxda40JhhkHEQrTLPBKymSD7ydBj2GVh+3uFGtbj3/D/LOvJL2Y6R7CXJsGfpOFk73ovA3dX4frIHGXz1beVjJVeCqW0T6c5xbgZlb2RJMx7fmxnbiEEMepSBNd85UEOdB04f89/1O/w1cDnyIFU="
                         />
                       </FormControl>
                       <FormDescription>

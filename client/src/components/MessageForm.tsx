@@ -212,6 +212,9 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              {/* Schedule Settings */}
+              <ScheduleSelector form={form} />
+
               {/* Message Type */}
               <div className="mb-6">
                 <h3 className="text-md font-medium text-gray-700 mb-4">訊息設定</h3>
@@ -421,9 +424,6 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
                   </div>
                 )}
               </div>
-
-              {/* Schedule Settings */}
-              <ScheduleSelector form={form} />
 
 
 
