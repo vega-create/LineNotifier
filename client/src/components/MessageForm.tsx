@@ -200,7 +200,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
         });
       }
       
-      // Invalidate messages cache to refresh any lists
+      // 強制刷新排程列表，確保立即顯示新建立的排程
       queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
       
       // Call onSuccess callback if provided

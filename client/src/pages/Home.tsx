@@ -1,13 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MessageForm from "../components/MessageForm";
 import ScheduleList from "../components/ScheduleList";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Group, Template, Message } from "@shared/schema";
 
 export default function Home() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // 設置自動刷新定時器
+  useEffect(() => {
+    // 創建一個定時器，每5秒刷新一次訊息數據
+    const refreshInterval = setInterval(() => {
+      // 重新獲取訊息數據
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      console.log("自動刷新排程清單...");
+    }, 5000); // 5秒刷新一次
+    
+    // 組件卸載時清除定時器
+    return () => clearInterval(refreshInterval);
+  }, [queryClient]);
   
   // Fetch groups
   const { data: groups, isLoading: isLoadingGroups } = useQuery<Group[]>({
@@ -22,6 +36,8 @@ export default function Home() {
   // Fetch messages (for schedule list)
   const { data: messages, isLoading: isLoadingMessages } = useQuery<Message[]>({
     queryKey: ["/api/messages"],
+    // 啟用自動背景刷新（不顯示加載狀態）
+    refetchInterval: 5000,
   });
 
   // If any data is still loading, show loading state
