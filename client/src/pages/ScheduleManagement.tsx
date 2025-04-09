@@ -97,7 +97,7 @@ export default function ScheduleManagement() {
                   selected={selectedDate}
                   onSelect={setSelectedDate}
                   locale={zhTW}
-                  className="border rounded-md p-3"
+                  className="border rounded-md p-3 bg-white z-50"
                 />
                 <div className="mt-4 text-sm text-gray-600">
                   {selectedDate ? (
