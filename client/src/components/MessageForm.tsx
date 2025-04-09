@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -31,6 +31,8 @@ const formSchema = z.object({
   scheduledDate: z.date(),
   startTime: z.string(),
   endTime: z.string(),
+  currency: z.string().optional(),
+  amount: z.string().optional(),
 });
 
 type MessageFormProps = {
@@ -54,6 +56,8 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
       scheduledDate: new Date(),
       startTime: "16:00",
       endTime: "18:00",
+      currency: "TWD", // 預設台幣
+      amount: "",
     },
   });
 
@@ -61,6 +65,43 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
   const watchMultiGroup = form.watch("multiGroup");
   const watchContent = form.watch("content");
   const watchTitle = form.watch("title");
+  const watchCurrency = form.watch("currency");
+  const watchAmount = form.watch("amount");
+  
+  // 監聽金額和幣別變更，更新訊息內容
+  useEffect(() => {
+    if ((watchTitle.includes("入帳") || watchTitle.includes("收款")) && watchAmount) {
+      // 獲取幣別符號
+      let currencySymbol = "";
+      if (watchCurrency === "TWD") currencySymbol = "NT$";
+      else if (watchCurrency === "USD") currencySymbol = "US$";
+      else if (watchCurrency === "AUD") currencySymbol = "AU$";
+      
+      // 構建金額字符串
+      const amountStr = `${currencySymbol}${watchAmount}`;
+      
+      // 檢查訊息內容是否已經包含了金額信息
+      if (!watchContent.includes(amountStr)) {
+        // 替換或添加金額信息
+        let newContent = watchContent;
+        
+        // 使用正則表達式嘗試查找並替換現有的金額信息
+        const currencyRegex = /(NT\$|US\$|AU\$)[0-9,.]+/;
+        if (currencyRegex.test(newContent)) {
+          newContent = newContent.replace(currencyRegex, amountStr);
+        } else if (watchContent.includes("金額")) {
+          // 如果包含"金額"關鍵字，在其後添加金額
+          newContent = newContent.replace(/金額[：:]\s*/, `金額: ${amountStr} `);
+        } else {
+          // 如果沒有找到適合的位置，直接添加到內容末尾
+          newContent = newContent + "\n\n金額: " + amountStr;
+        }
+        
+        // 更新表單內容
+        form.setValue("content", newContent);
+      }
+    }
+  }, [watchCurrency, watchAmount, watchTitle, watchContent, form]);
 
   const handleTemplateSelect = (template: Template) => {
     setSelectedTemplate(template);
@@ -88,7 +129,9 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
         scheduledTime: scheduleTime.toISOString(),
         endTime: endTime.toISOString(),
         status: "scheduled",
-        groupIds: data.groups
+        groupIds: data.groups,
+        currency: data.currency,
+        amount: data.amount
       };
       
       // Send message data to API
@@ -104,6 +147,8 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
         scheduledDate: new Date(),
         startTime: "16:00",
         endTime: "18:00",
+        currency: "TWD",
+        amount: "",
       });
       
       // Invalidate messages cache to refresh any lists
@@ -128,6 +173,8 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
       scheduledDate: new Date(),
       startTime: "16:00",
       endTime: "18:00",
+      currency: "TWD",
+      amount: "",
     });
     setSelectedTemplate(null);
   };
@@ -306,7 +353,7 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
                   control={form.control}
                   name="content"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="mb-4">
                       <FormLabel>訊息內容</FormLabel>
                       <FormControl>
                         <Textarea 
@@ -319,6 +366,59 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
                     </FormItem>
                   )}
                 />
+
+                {/* 幣別與金額區塊 - 僅在入帳通知或收款通知時顯示 */}
+                {(watchTitle.includes("入帳") || watchTitle.includes("收款")) && (
+                  <div className="bg-gray-50 p-4 rounded-md space-y-4">
+                    <h4 className="font-medium text-gray-700">通知金額設定</h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="currency"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>幣別</FormLabel>
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="選擇幣別" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="TWD">台幣 (TWD)</SelectItem>
+                                <SelectItem value="AUD">澳幣 (AUD)</SelectItem>
+                                <SelectItem value="USD">美金 (USD)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="amount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>金額</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="text" 
+                                placeholder="輸入金額" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Schedule Settings */}
@@ -395,6 +495,19 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
                 {form.getValues("scheduledDate").toLocaleDateString()} {form.getValues("startTime")}
               </p>
             </div>
+            
+            {/* 顯示幣別和金額（如果有） */}
+            {(watchTitle.includes("入帳") || watchTitle.includes("收款")) && form.getValues("amount") && (
+              <div className="space-y-1">
+                <h3 className="text-sm font-medium">通知金額</h3>
+                <p className="text-sm">
+                  {form.getValues("currency") === "TWD" && "NT$"}
+                  {form.getValues("currency") === "USD" && "US$"}
+                  {form.getValues("currency") === "AUD" && "AU$"}
+                  {form.getValues("amount")}
+                </p>
+              </div>
+            )}
             
             <DialogFooter>
               <Button onClick={() => setIsPreviewOpen(false)}>關閉</Button>

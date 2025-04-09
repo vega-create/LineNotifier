@@ -39,6 +39,8 @@ export const messages = pgTable("messages", {
   status: text("status").notNull().default("scheduled"), // 'scheduled', 'sent', 'failed'
   createdAt: timestamp("created_at").notNull().defaultNow(),
   groupIds: text("group_ids").array().notNull(), // Array of group IDs
+  currency: text("currency"), // 'TWD', 'AUD', 'USD'
+  amount: text("amount"), // 金額
 });
 
 export const insertMessageSchema = createInsertSchema(messages).pick({
@@ -49,6 +51,8 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
   type: true,
   status: true,
   groupIds: true,
+  currency: true,
+  amount: true,
 });
 
 // Settings schema
@@ -89,4 +93,6 @@ export type MessageFormData = {
   scheduledDate: Date;
   startTime: string;
   endTime: string;
+  currency?: string; // 'TWD', 'AUD', 'USD'
+  amount?: string; // 金額
 };
