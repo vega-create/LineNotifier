@@ -43,19 +43,18 @@ export const messages = pgTable("messages", {
   amount: text("amount"), // 金額
 });
 
-// 對於Insert操作，使用基本的schema定義
-export const insertMessageSchema = createInsertSchema(messages)
-  .pick({
-    title: true,
-    content: true,
-    scheduledTime: true,
-    endTime: true,
-    type: true, 
-    status: true,
-    groupIds: true,
-    currency: true,
-    amount: true,
-  });
+// 對於Insert操作，使用自定義的Zod schema以確保更好的驗證
+export const insertMessageSchema = z.object({
+  title: z.string(),
+  content: z.string(),
+  scheduledTime: z.string(), // 明確使用string類型
+  endTime: z.string().nullable().optional(), // 明確使用string類型，且可為空
+  type: z.string(),
+  status: z.string().default("scheduled"),
+  groupIds: z.array(z.string()),
+  currency: z.string().nullable().optional(),
+  amount: z.string().nullable().optional(),
+});
 
 // Settings schema
 export const settings = pgTable("settings", {

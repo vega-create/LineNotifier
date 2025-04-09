@@ -144,15 +144,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   router.post("/messages", async (req: Request, res: Response) => {
     try {
-      // 直接使用body數據，因為我們已經修改了schema來接受字符串日期
+      // 直接使用body數據，但先進行驗證
       const messageData = req.body;
       console.log("POST /messages - Received data:", JSON.stringify(messageData));
-      const message = await storage.createMessage(messageData);
-
-      // In a real implementation, this would send the message to LINE
-      // or schedule it for sending later
       
-      res.status(201).json(message);
+      // 手動驗證Zod schema
+      try {
+        const validated = insertMessageSchema.parse(messageData);
+        console.log("Validation passed:", validated);
+        const message = await storage.createMessage(validated);
+        
+        // In a real implementation, this would send the message to LINE
+        // or schedule it for sending later
+        
+        res.status(201).json(message);
+      } catch (zodError) {
+        console.error("Zod validation error:", zodError);
+        return res.status(400).json({ 
+          error: `Validation error: ${zodError instanceof Error ? zodError.message : String(zodError)}`
+        });
+      }
     } catch (err) {
       console.error("POST /messages - Error:", err);
       console.error("Request body:", JSON.stringify(req.body));
@@ -167,16 +178,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
-      // 直接使用body數據，因為我們已經修改了schema來接受字符串日期
+      // 直接使用body數據，但先進行驗證
       const messageData = req.body;
-      const updatedMessage = await storage.updateMessage(id, messageData);
+      console.log("PUT /messages/:id - Received data:", JSON.stringify(messageData));
       
-      if (!updatedMessage) {
-        return res.status(404).json({ error: "Message not found" });
+      // 手動驗證Zod schema，使用partial()允許部分更新
+      try {
+        // 使用partial()允許只更新部分字段
+        const validated = insertMessageSchema.partial().parse(messageData);
+        console.log("Validation passed:", validated);
+        const updatedMessage = await storage.updateMessage(id, validated);
+        
+        if (!updatedMessage) {
+          return res.status(404).json({ error: "Message not found" });
+        }
+        
+        res.json(updatedMessage);
+      } catch (zodError) {
+        console.error("Zod validation error:", zodError);
+        return res.status(400).json({ 
+          error: `Validation error: ${zodError instanceof Error ? zodError.message : String(zodError)}`
+        });
       }
-      
-      res.json(updatedMessage);
     } catch (err) {
+      console.error("PUT /messages/:id - Error:", err);
+      if (err instanceof Error) {
+        return res.status(500).json({ error: err.message });
+      }
       handleZodError(err, res);
     }
   });

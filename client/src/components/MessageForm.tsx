@@ -147,6 +147,12 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       const endTime = new Date(scheduleDate);
       endTime.setHours(endHour, endMinute, 0);
       
+      console.log("準備發送訊息，日期時間:", {
+        scheduledDate: scheduleDate.toISOString(),
+        scheduleTime: scheduleTime.toISOString(),
+        endTime: endTime.toISOString()
+      });
+      
       // 格式化時間為ISO字符串以符合後端期望的格式
       const messageData = {
         title: data.title,
