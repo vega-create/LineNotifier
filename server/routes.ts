@@ -285,28 +285,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("LINE Channel Access Token not found");
       }
       
+      console.log(`實際發送Line訊息：群組ID=${lineGroupId.slice(0, 10)}...，Token長度=${token.length}字元，內容長度=${content.length}字元`);
+      
+      // 檢查LINE群組ID是否有效
+      if (!lineGroupId || lineGroupId.length < 10) {
+        throw new Error("Invalid LINE Group ID");
+      }
+      
+      const requestBody = {
+        to: lineGroupId,
+        messages: [
+          {
+            type: "text",
+            text: content
+          }
+        ]
+      };
+      
+      console.log("發送LINE訊息requestBody:", JSON.stringify(requestBody, null, 2));
+      
       const response = await fetch(LINE_API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          to: lineGroupId,
-          messages: [
-            {
-              type: "text",
-              text: content
-            }
-          ]
-        })
+        body: JSON.stringify(requestBody)
       });
       
-      const result = await response.json() as any;
+      // 不論是否成功都獲取響應
+      let resultText = '';
+      try {
+        resultText = await response.text();
+        console.log(`LINE API原始回應: ${resultText}`);
+      } catch (e) {
+        console.error("無法讀取回應內容:", e);
+      }
+      
+      let result;
+      try {
+        result = JSON.parse(resultText);
+      } catch (e) {
+        result = { raw: resultText };
+        console.error("無法解析JSON回應:", e);
+      }
       
       if (!response.ok) {
-        console.error("LINE API Error:", result);
-        throw new Error(`LINE API Error: ${result.message || JSON.stringify(result)}`);
+        console.error(`LINE API錯誤: 狀態碼=${response.status}, 訊息=${response.statusText}`);
+        console.error("LINE API錯誤詳情:", result);
+        throw new Error(`LINE API Error (${response.status}): ${result.message || resultText}`);
       }
       
       return result;
@@ -373,12 +400,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const results = await Promise.all(
         validGroups.map(async (group) => {
           try {
+            console.log(`嘗試發送訊息到群組: ${group.name} (ID: ${group.lineId})`);
+            console.log(`使用的訊息內容: ${finalContent}`);
+            console.log(`Line API Token長度: ${lineApiToken ? lineApiToken.length : 0}`);
+            
             // Using actual LINE API integration
             const result = await sendLineMessage(
               group.lineId, 
               finalContent, 
               lineApiToken
             );
+            
+            console.log(`發送成功，API回應:`, result);
             return { groupId: group.id, success: true, result };
           } catch (error) {
             console.error(`Failed to send to group ${group.name}:`, error);

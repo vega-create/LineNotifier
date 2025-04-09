@@ -366,9 +366,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
                         </FormItem>
                       )}
                     />
-                    <Button type="button" onClick={() => setIsAddGroupModalOpen(true)}>
-                      <i className="fas fa-plus mr-1"></i> 新增群組
-                    </Button>
+                    {/* 移除新增群組按鈕，避免與頁面上方按鈕混淆 */}
                   </div>
                 </div>
                 
