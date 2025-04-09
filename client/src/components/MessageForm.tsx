@@ -92,6 +92,19 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
   const watchCurrency = form.watch("currency");
   const watchAmount = form.watch("amount");
   
+  // 當標題或內容改變時，自動清除對應的錯誤提示
+  useEffect(() => {
+    if (watchTitle && watchTitle.trim() !== '') {
+      form.clearErrors('title');
+    }
+  }, [watchTitle, form]);
+  
+  useEffect(() => {
+    if (watchContent && watchContent.trim() !== '') {
+      form.clearErrors('content');
+    }
+  }, [watchContent, form]);
+  
   // 監聽金額和幣別變更，更新訊息內容
   useEffect(() => {
     if ((watchTitle.includes("入帳") || watchTitle.includes("收款")) && watchAmount) {
