@@ -62,69 +62,80 @@ export default function ScheduleManagement() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-xl font-semibold flex items-center">
-              <i className="fas fa-calendar-alt mr-2 text-primary"></i> 排程管理
-            </CardTitle>
-            <Tabs defaultValue="calendar" className="w-auto">
-              <TabsList>
-                <TabsTrigger 
-                  value="calendar" 
-                  onClick={() => setView("calendar")}
-                  className={view === "calendar" ? "bg-primary text-white" : ""}
-                >
-                  日曆檢視
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="list" 
-                  onClick={() => setView("list")}
-                  className={view === "list" ? "bg-primary text-white" : ""}
-                >
-                  列表檢視
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {view === "calendar" ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-1">
-                                <div style={{ position: 'relative', zIndex: 50 }}>
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      locale={zhTW}
-                      className="border rounded-md p-3 bg-white"
-                    />
+      {/* 視圖選擇 */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold flex items-center">
+          <i className="fas fa-calendar-alt mr-2 text-primary"></i> 排程管理
+        </h1>
+        <Tabs defaultValue="calendar" className="w-auto">
+          <TabsList>
+            <TabsTrigger 
+              value="calendar" 
+              onClick={() => setView("calendar")}
+              className={view === "calendar" ? "bg-primary text-white" : ""}
+            >
+              日曆檢視
+            </TabsTrigger>
+            <TabsTrigger 
+              value="list" 
+              onClick={() => setView("list")}
+              className={view === "list" ? "bg-primary text-white" : ""}
+            >
+              列表檢視
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* 日曆視圖 */}
+      {view === "calendar" && (
+        <div className="grid grid-cols-1 gap-6">
+          {/* 日曆區塊 */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="md:w-auto">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    locale={zhTW}
+                    className="border rounded-md p-3 bg-white w-full"
+                  />
+                  <div className="mt-2 text-sm text-gray-600">
+                    <p>已選擇日期: {selectedDate ? format(selectedDate, "yyyy/MM/dd") : "未選擇"}</p>
                   </div>
-                <div className="mt-4 text-sm text-gray-600">
-                  {selectedDate ? (
-                    <p>已選擇日期: {format(selectedDate, "yyyy/MM/dd")}</p>
-                  ) : (
-                    <p>請選擇日期</p>
-                  )}
                 </div>
               </div>
-              <div className="md:col-span-2">
-                <h3 className="font-medium text-lg mb-4">當日排程</h3>
-                {filteredMessages && filteredMessages.length > 0 ? (
-                  <ScheduleList messages={filteredMessages} groups={groups} hideTitle compact />
-                ) : (
-                  <div className="border rounded-md p-6 text-center text-gray-500">
-                    <p>選擇的日期沒有排程訊息</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
+            </CardContent>
+          </Card>
+
+          {/* 排程列表區塊 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-medium">當日排程</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filteredMessages && filteredMessages.length > 0 ? (
+                <ScheduleList messages={filteredMessages} groups={groups} hideTitle compact />
+              ) : (
+                <div className="border rounded-md p-6 text-center text-gray-500">
+                  <p>選擇的日期沒有排程訊息</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* 列表視圖 */}
+      {view === "list" && (
+        <Card>
+          <CardContent className="p-6">
             <ScheduleList messages={messages} groups={groups} hideTitle />
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
