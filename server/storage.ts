@@ -80,7 +80,7 @@ export class MemStorage implements IStorage {
       { name: "專案進度詢問", content: "OOO客戶的網站專案進度如何？是否已完成首頁設計稿？請回報最新進度，謝謝。", type: "project" },
       { name: "入帳通知", content: "親愛的客戶您好，\n我們已收到您的 6 月份款項。\n感謝您的支持！如有任何問題，歡迎隨時聯繫我們。", type: "payment" },
       { name: "發票寄送通知", content: "親愛的客戶您好，\n您的電子發票（FY-12345678）已寄至您的電子郵件信箱，請查收。\n如有任何問題，歡迎隨時聯繫我們。", type: "invoice" },
-      { name: "自我介紹", content: "您好，我是智慧媽咪LINE通知系統，負責提醒各項事項，包含：會議通知、請款、入款、發票等寄送通知。\n如需協助請洽客服：02-1234-5678", type: "introduction" },
+      { name: "自我介紹", content: "您好，我是智慧媽咪LINE通知系統，負責提醒各項事項，包含：會議通知、請款、入款、發票等寄送通知。", type: "introduction" },
       { name: "收款通知", content: "親愛的客戶您好，\n這是7月份的服務費用通知。請於5日前匯款至：\n\n彰化銀行 009\n帳號：96038605494000\n戶名：智慧媽咪國際有限公司\n\n發票將於收到款項後提供，感謝您的合作。", type: "payment" }
     ];
 
