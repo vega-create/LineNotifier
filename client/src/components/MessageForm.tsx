@@ -231,22 +231,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
           <div className="flex justify-between items-center">
             <CardTitle className="text-xl font-semibold text-gray-800">LINE訊息發送</CardTitle>
             
-            <div className="flex items-center">
-              <div className="relative mr-2">
-                <Select defaultValue="2">
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="選擇群組" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id.toString()}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
+            <div className="flex items-center">              
               <Button 
                 variant="outline"
                 onClick={() => window.location.href="/groups"}
