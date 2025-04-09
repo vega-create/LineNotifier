@@ -92,13 +92,15 @@ export default function ScheduleManagement() {
           {view === "calendar" ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  locale={zhTW}
-                  className="border rounded-md p-3 bg-white z-50"
-                />
+                                <div style={{ position: 'relative', zIndex: 50 }}>
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      locale={zhTW}
+                      className="border rounded-md p-3 bg-white"
+                    />
+                  </div>
                 <div className="mt-4 text-sm text-gray-600">
                   {selectedDate ? (
                     <p>已選擇日期: {format(selectedDate, "yyyy/MM/dd")}</p>

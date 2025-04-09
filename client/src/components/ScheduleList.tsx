@@ -26,9 +26,8 @@ export default function ScheduleList({ messages, groups, hideTitle = false, comp
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
 
-  // Sort messages by scheduled time (newest first) and filter only scheduled ones
-  const scheduledMessages = messages
-    .filter(message => message.status === "scheduled")
+  // Sort messages by scheduled time
+  const scheduledMessages = [...messages]
     .sort((a, b) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime());
 
   const handleDeleteMessage = async (id: number) => {
