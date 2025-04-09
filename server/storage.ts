@@ -228,30 +228,85 @@ export class MemStorage implements IStorage {
     return this.messages.get(id);
   }
 
-  async createMessage(message: InsertMessage): Promise<Message> {
+  async createMessage(messageData: InsertMessage): Promise<Message> {
     const id = this.messageId++;
     const now = new Date();
-    // 確保必要的字段具有默認值
-    const newMessage: Message = { 
-      ...message, 
+    
+    // 創建新的消息對象，只包含基本字段
+    const baseMessage = {
       id,
+      title: messageData.title,
+      content: messageData.content,
+      type: messageData.type,
+      status: messageData.status || "scheduled",
       createdAt: now,
-      status: message.status || "scheduled",
-      endTime: message.endTime || null,
-      currency: message.currency || null,
-      amount: message.amount || null
+      groupIds: messageData.groupIds,
+      currency: messageData.currency || null,
+      amount: messageData.amount || null
     };
+    
+    // 處理日期格式
+    let scheduledTime: Date;
+    if (messageData.scheduledTime instanceof Date) {
+      scheduledTime = messageData.scheduledTime;
+    } else {
+      scheduledTime = new Date(messageData.scheduledTime);
+    }
+    
+    let endTime: Date | null = null;
+    if (messageData.endTime) {
+      if (messageData.endTime instanceof Date) {
+        endTime = messageData.endTime;
+      } else {
+        endTime = new Date(messageData.endTime);
+      }
+    }
+    
+    // 創建最終的消息對象
+    const newMessage: Message = { 
+      ...baseMessage,
+      scheduledTime,
+      endTime
+    };
+    
     this.messages.set(id, newMessage);
     return newMessage;
   }
 
-  async updateMessage(id: number, message: Partial<InsertMessage>): Promise<Message | undefined> {
+  async updateMessage(id: number, messageData: Partial<InsertMessage>): Promise<Message | undefined> {
     const existingMessage = this.messages.get(id);
     if (!existingMessage) {
       return undefined;
     }
     
-    const updatedMessage: Message = { ...existingMessage, ...message };
+    // 創建基本更新字段對象
+    const baseUpdates = { ...messageData };
+    delete baseUpdates.scheduledTime;
+    delete baseUpdates.endTime;
+    
+    // 創建更新後的消息對象
+    const updatedMessage = { ...existingMessage, ...baseUpdates };
+    
+    // 處理 scheduledTime
+    if (messageData.scheduledTime !== undefined) {
+      if (messageData.scheduledTime instanceof Date) {
+        updatedMessage.scheduledTime = messageData.scheduledTime;
+      } else {
+        updatedMessage.scheduledTime = new Date(messageData.scheduledTime);
+      }
+    }
+    
+    // 處理 endTime
+    if (messageData.endTime !== undefined) {
+      if (messageData.endTime === null) {
+        updatedMessage.endTime = null;
+      } else if (messageData.endTime instanceof Date) {
+        updatedMessage.endTime = messageData.endTime;
+      } else {
+        updatedMessage.endTime = new Date(messageData.endTime);
+      }
+    }
+    
     this.messages.set(id, updatedMessage);
     return updatedMessage;
   }
@@ -265,18 +320,44 @@ export class MemStorage implements IStorage {
     return this.settings;
   }
 
-  async updateSettings(settings: Partial<InsertSettings>): Promise<Settings> {
+  async updateSettings(settingsData: Partial<InsertSettings>): Promise<Settings> {
+    // 創建基本更新字段對象，排除日期
+    const baseUpdates = { ...settingsData };
+    delete baseUpdates.lastSynced;
+    
+    // 處理日期
+    let lastSyncedDate: Date | null = null;
+    if (settingsData.lastSynced !== undefined) {
+      if (settingsData.lastSynced === null) {
+        lastSyncedDate = null;
+      } else if (settingsData.lastSynced instanceof Date) {
+        lastSyncedDate = settingsData.lastSynced;
+      } else {
+        lastSyncedDate = new Date(settingsData.lastSynced);
+      }
+    }
+    
     if (!this.settings) {
+      // 創建新設置
       this.settings = {
         id: 1,
-        lineApiToken: settings.lineApiToken || "",
-        lineChannelSecret: settings.lineChannelSecret || "",
-        lastSynced: settings.lastSynced || new Date(),
-        isConnected: settings.isConnected || false
+        lineApiToken: settingsData.lineApiToken || "",
+        lineChannelSecret: settingsData.lineChannelSecret || "",
+        lastSynced: lastSyncedDate || new Date(),
+        isConnected: settingsData.isConnected || false
       };
     } else {
-      this.settings = { ...this.settings, ...settings };
+      // 更新現有設置
+      const updated = { ...this.settings, ...baseUpdates };
+      
+      // 只有在lastSynced有指定時才更新它
+      if (settingsData.lastSynced !== undefined) {
+        updated.lastSynced = lastSyncedDate;
+      }
+      
+      this.settings = updated;
     }
+    
     return this.settings;
   }
 }

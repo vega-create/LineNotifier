@@ -144,28 +144,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   router.post("/messages", async (req: Request, res: Response) => {
     try {
-      // 將ISO字符串轉換為Date對象
-      const requestData = { ...req.body };
-      
-      // 處理scheduledTime
-      if (requestData.scheduledTime && typeof requestData.scheduledTime === 'string') {
-        try {
-          requestData.scheduledTime = new Date(requestData.scheduledTime);
-        } catch (e) {
-          return res.status(400).json({ error: "Invalid scheduledTime date format" });
-        }
-      }
-      
-      // 處理endTime
-      if (requestData.endTime && typeof requestData.endTime === 'string') {
-        try {
-          requestData.endTime = new Date(requestData.endTime);
-        } catch (e) {
-          return res.status(400).json({ error: "Invalid endTime date format" });
-        }
-      }
-      
-      const messageData = insertMessageSchema.parse(requestData);
+      // 直接使用body數據，因為我們已經修改了insertMessageSchema來接受字符串日期
+      const messageData = insertMessageSchema.parse(req.body);
       const message = await storage.createMessage(messageData);
 
       // In a real implementation, this would send the message to LINE
@@ -181,28 +161,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
-      // 將ISO字符串轉換為Date對象
-      const requestData = { ...req.body };
-      
-      // 處理scheduledTime
-      if (requestData.scheduledTime && typeof requestData.scheduledTime === 'string') {
-        try {
-          requestData.scheduledTime = new Date(requestData.scheduledTime);
-        } catch (e) {
-          return res.status(400).json({ error: "Invalid scheduledTime date format" });
-        }
-      }
-      
-      // 處理endTime
-      if (requestData.endTime && typeof requestData.endTime === 'string') {
-        try {
-          requestData.endTime = new Date(requestData.endTime);
-        } catch (e) {
-          return res.status(400).json({ error: "Invalid endTime date format" });
-        }
-      }
-      
-      const messageData = insertMessageSchema.partial().parse(requestData);
+      // 直接使用body數據，因為我們已經修改了insertMessageSchema來接受字符串日期
+      const messageData = insertMessageSchema.partial().parse(req.body);
       const updatedMessage = await storage.updateMessage(id, messageData);
       
       if (!updatedMessage) {
@@ -266,19 +226,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   router.put("/settings", async (req: Request, res: Response) => {
     try {
-      // 確保lastSynced是一個有效的日期
-      let settingsData = { ...req.body };
-      if (typeof settingsData.lastSynced === 'string') {
-        try {
-          // 嘗試解析日期字符串
-          new Date(settingsData.lastSynced);
-        } catch (e) {
-          // 如果無法解析，使用當前時間
-          settingsData.lastSynced = new Date().toISOString();
-        }
-      }
-      
-      const parsedData = insertSettingsSchema.partial().parse(settingsData);
+      // 直接使用body數據，因為我們已經修改了insertSettingsSchema來接受字符串日期
+      const parsedData = insertSettingsSchema.partial().parse(req.body);
       const updatedSettings = await storage.updateSettings(parsedData);
       res.json(updatedSettings);
     } catch (err) {

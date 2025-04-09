@@ -43,7 +43,8 @@ export const messages = pgTable("messages", {
   amount: text("amount"), // 金額
 });
 
-export const insertMessageSchema = createInsertSchema(messages).pick({
+// 創建基本的 insert schema
+const baseMessageSchema = createInsertSchema(messages).pick({
   title: true,
   content: true,
   scheduledTime: true,
@@ -55,6 +56,12 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
   amount: true,
 });
 
+// 擴展以處理日期字段，讓它們接受字符串或Date對象
+export const insertMessageSchema = baseMessageSchema.extend({
+  scheduledTime: z.union([z.string(), z.date()]),
+  endTime: z.union([z.string(), z.date(), z.null()]).optional(),
+});
+
 // Settings schema
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
@@ -64,11 +71,17 @@ export const settings = pgTable("settings", {
   isConnected: boolean("is_connected").default(false),
 });
 
-export const insertSettingsSchema = createInsertSchema(settings).pick({
+// 創建基本的 settings schema
+const baseSettingsSchema = createInsertSchema(settings).pick({
   lineApiToken: true,
   lineChannelSecret: true,
   lastSynced: true,
   isConnected: true,
+});
+
+// 擴展以處理日期字段
+export const insertSettingsSchema = baseSettingsSchema.extend({
+  lastSynced: z.union([z.string(), z.date(), z.null()]).optional(),
 });
 
 // Type definitions
