@@ -22,6 +22,7 @@ import ScheduleSelector from "./ScheduleSelector";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   title: z.string().min(1, "訊息標題不能為空"),
@@ -47,6 +48,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const { toast } = useToast();
   
   // 設置默認值，考慮是否存在現有消息
   const defaultValues = existingMessage 

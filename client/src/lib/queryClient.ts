@@ -1,9 +1,20 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
+  // 204 No Content 表示成功但無內容返回（常用於DELETE操作）
+  if (res.status === 204) {
+    return;
+  }
+  
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    // 嘗試讀取響應內容，如果為空則使用狀態文本
+    let text;
+    try {
+      text = await res.text();
+    } catch (e) {
+      text = res.statusText;
+    }
+    throw new Error(`${res.status}: ${text || res.statusText}`);
   }
 }
 
@@ -20,8 +31,21 @@ export async function apiRequest<T = any>(
   });
 
   await throwIfResNotOk(res);
-  const responseData = await res.json();
-  return responseData as T;
+  
+  // 處理204狀態碼（無內容）
+  if (res.status === 204) {
+    return { success: true } as unknown as T;
+  }
+  
+  // 嘗試解析JSON響應
+  try {
+    const responseData = await res.json();
+    return responseData as T;
+  } catch (error) {
+    // 如果無法解析JSON，返回空對象
+    console.warn("無法解析JSON響應:", error);
+    return { success: true } as unknown as T;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
