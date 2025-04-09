@@ -276,7 +276,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     lineApiToken?: string
   ) {
     try {
-      const LINE_API_URL = "https://api.line.me/v2/bot/message/push";
+      const LINE_API_URL = "https://api.line.me/v2/bot/message/push"; 
+      console.log(`發送訊息到LINE API的URL: ${LINE_API_URL}`);
       
       // 優先使用環境變量中的ACCESS TOKEN，如果沒有則使用傳入的token
       const token = process.env.LINE_CHANNEL_ACCESS_TOKEN || lineApiToken;
