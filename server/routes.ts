@@ -285,11 +285,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("LINE Channel Access Token not found");
       }
       
-      console.log(`實際發送Line訊息：群組ID=${lineGroupId.slice(0, 10)}...，Token長度=${token.length}字元，內容長度=${content.length}字元`);
+      console.log(`實際發送Line訊息：群組ID=${lineGroupId}，Token長度=${token.length}字元，內容長度=${content.length}字元`);
       
       // 檢查LINE群組ID是否有效
-      if (!lineGroupId || lineGroupId.length < 10) {
-        throw new Error("Invalid LINE Group ID");
+      if (!lineGroupId || lineGroupId.trim() === "") {
+        throw new Error("Invalid LINE Group ID - Group ID is empty");
+      }
+      
+      // 檢查GROUP ID格式，LINE群組ID通常以C開頭並且長度約為33個字元
+      if (!lineGroupId.startsWith("C") || lineGroupId.length < 20) {
+        console.warn(`Suspicious LINE Group ID: ${lineGroupId} - format may be invalid`);
       }
       
       const requestBody = {

@@ -175,7 +175,7 @@ export default function SettingsPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        從LINE Developer Console取得的長效 Channel Access Token
+                        從LINE Developer Console取得的長效 Channel Access Token（有效期90天）
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
