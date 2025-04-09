@@ -75,7 +75,7 @@ export class MemStorage implements IStorage {
     // Add default templates
     const defaultTemplates: InsertTemplate[] = [
       { name: "自訂", content: "", type: "custom" },
-      { name: "會議提醒", content: "親愛的團隊成員，請記得參加今天 14:00 的專案會議。地點：台北市松山區南京東路三段275號。", type: "meeting" },
+      { name: "會議提醒", content: "【每日提醒】 明天早上開會囉！\n時間點：每週四 早上 10:00-11:00\n會議連結為：https://meet.google.com/wta-wwbd-yiw\n請填寫會議表單：https://mommystartup.work/開會表單\n專案表模板（請建立副本後再製作）：https://mommystartup.work/專案模板\n請確認報告內容：\n0.其他週表單填寫\n1.最後一週專案計畫進度與成效\n2.本週需要大家協助的地方", type: "meeting" },
       { name: "放假通知", content: "各位同仁好，\n智慧媽咪將於 5/1 勞動節放假一天，5/2 正常上班。\n如有緊急事項請聯繫主管。\n祝大家連假愉快！", type: "holiday" },
       { name: "專案進度詢問", content: "OOO客戶的網站專案進度如何？是否已完成首頁設計稿？請回報最新進度，謝謝。", type: "project" },
       { name: "入帳通知", content: "親愛的客戶您好，\n我們已收到您的 6 月份款項。\n感謝您的支持！如有任何問題，歡迎隨時聯繫我們。", type: "payment" },
@@ -99,7 +99,7 @@ export class MemStorage implements IStorage {
     const defaultMessages: InsertMessage[] = [
       {
         title: "會議提醒",
-        content: "親愛的團隊成員，請記得參加今天 14:00 的專案會議。地點：台北市松山區南京東路三段275號。",
+        content: "【每日提醒】 明天早上開會囉！\n時間點：每週四 早上 10:00-11:00\n會議連結為：https://meet.google.com/wta-wwbd-yiw\n請填寫會議表單：https://mommystartup.work/開會表單\n專案表模板（請建立副本後再製作）：https://mommystartup.work/專案模板\n請確認報告內容：\n0.其他週表單填寫\n1.最後一週專案計畫進度與成效\n2.本週需要大家協助的地方",
         scheduledTime: now.toISOString(),
         endTime: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours later
         type: "single",
