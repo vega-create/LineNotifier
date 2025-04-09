@@ -202,7 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 如果存在環境變量設定，優先使用環境變量
       if (envToken || envSecret) {
-        const lastSyncedDate = settings?.lastSynced ? new Date(settings.lastSynced) : new Date();
+        const lastSyncedDate = new Date().toISOString();
         
         const updatedSettings = {
           ...(settings || {}),
@@ -383,7 +383,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(response);
     } catch (err) {
       console.error("Error sending message:", err);
-      res.status(500).json({ error: "Failed to send message" });
+      res.status(500).json({ 
+        error: "Failed to send message", 
+        details: err instanceof Error ? err.message : String(err) 
+      });
     }
   });
 
@@ -428,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lineApiToken,
           lineChannelSecret,
           isConnected: true,
-          lastSynced: new Date()
+          lastSynced: new Date().toISOString()
         });
         
         res.json({ success: true });
@@ -454,7 +457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lineApiToken: envToken,
           lineChannelSecret: envSecret,
           isConnected: true,
-          lastSynced: new Date()
+          lastSynced: new Date().toISOString()
         });
         
         res.json({ success: true });

@@ -34,7 +34,7 @@ export default function SettingsPage() {
       lineApiToken: "",
       lineChannelSecret: "",
       isConnected: false,
-      lastSynced: new Date(),
+      lastSynced: new Date().toISOString(),
     },
   });
 
@@ -45,7 +45,7 @@ export default function SettingsPage() {
         lineApiToken: settings.lineApiToken || "",
         lineChannelSecret: settings.lineChannelSecret || "",
         isConnected: settings.isConnected || false,
-        lastSynced: settings.lastSynced ? new Date(settings.lastSynced) : new Date(),
+        lastSynced: settings.lastSynced || new Date().toISOString(),
       });
     }
   }, [settings, form]);

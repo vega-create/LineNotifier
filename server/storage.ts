@@ -100,8 +100,8 @@ export class MemStorage implements IStorage {
       {
         title: "會議提醒",
         content: "親愛的團隊成員，請記得參加今天 14:00 的專案會議。地點：台北市松山區南京東路三段275號。",
-        scheduledTime: now,
-        endTime: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2 hours later
+        scheduledTime: now.toISOString(),
+        endTime: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours later
         type: "single",
         status: "scheduled",
         groupIds: ["1"], // 小幫手群組
@@ -111,8 +111,8 @@ export class MemStorage implements IStorage {
       {
         title: "專案進度詢問",
         content: "OOO客戶的網站專案進度如何？是否已完成首頁設計稿？請回報最新進度，謝謝。",
-        scheduledTime: yesterday,
-        endTime: new Date(yesterday.getTime() + 1 * 60 * 60 * 1000), // 1 hour later
+        scheduledTime: yesterday.toISOString(),
+        endTime: new Date(yesterday.getTime() + 1 * 60 * 60 * 1000).toISOString(), // 1 hour later
         type: "single",
         status: "sent",
         groupIds: ["8"], // 工程師組
@@ -122,8 +122,8 @@ export class MemStorage implements IStorage {
       {
         title: "收款通知",
         content: "親愛的客戶您好，\n這是7月份的服務費用通知。請於5日前匯款至：\n\n彰化銀行 009\n帳號：96038605494000\n戶名：智慧媽咪國際有限公司\n\n發票將於收到款項後提供，感謝您的合作。",
-        scheduledTime: new Date(yesterday.setDate(yesterday.getDate() - 3)),
-        endTime: new Date(yesterday.getTime() + 30 * 60 * 1000), // 30 min later
+        scheduledTime: new Date(yesterday.setDate(yesterday.getDate() - 3)).toISOString(),
+        endTime: new Date(yesterday.getTime() + 30 * 60 * 1000).toISOString(), // 30 min later
         type: "single",
         status: "sent",
         groupIds: ["2"], // Anna群
@@ -133,8 +133,8 @@ export class MemStorage implements IStorage {
       {
         title: "入帳通知",
         content: "親愛的客戶您好，\n我們已收到您的 6 月份款項。\n感謝您的支持！如有任何問題，歡迎隨時聯繫我們。",
-        scheduledTime: new Date(now.setDate(now.getDate() - 5)),
-        endTime: new Date(now.getTime() + 1 * 60 * 60 * 1000), // 1 hour later
+        scheduledTime: new Date(now.setDate(now.getDate() - 5)).toISOString(),
+        endTime: new Date(now.getTime() + 1 * 60 * 60 * 1000).toISOString(), // 1 hour later
         type: "single",
         status: "sent",
         groupIds: ["6"], // Tina群
@@ -152,7 +152,7 @@ export class MemStorage implements IStorage {
       id: 1,
       lineApiToken: process.env.LINE_API_TOKEN || "",
       lineChannelSecret: process.env.LINE_CHANNEL_SECRET || "",
-      lastSynced: new Date(),
+      lastSynced: new Date().toISOString(),
       isConnected: true
     };
   }
@@ -232,41 +232,19 @@ export class MemStorage implements IStorage {
     const id = this.messageId++;
     const now = new Date();
     
-    // 創建新的消息對象，只包含基本字段
-    const baseMessage = {
+    // 直接使用字符串格式的日期
+    const newMessage: Message = {
       id,
       title: messageData.title,
       content: messageData.content,
       type: messageData.type,
       status: messageData.status || "scheduled",
-      createdAt: now,
+      createdAt: now.toISOString(),
       groupIds: messageData.groupIds,
       currency: messageData.currency || null,
-      amount: messageData.amount || null
-    };
-    
-    // 處理日期格式
-    let scheduledTime: Date;
-    if (messageData.scheduledTime instanceof Date) {
-      scheduledTime = messageData.scheduledTime;
-    } else {
-      scheduledTime = new Date(messageData.scheduledTime);
-    }
-    
-    let endTime: Date | null = null;
-    if (messageData.endTime) {
-      if (messageData.endTime instanceof Date) {
-        endTime = messageData.endTime;
-      } else {
-        endTime = new Date(messageData.endTime);
-      }
-    }
-    
-    // 創建最終的消息對象
-    const newMessage: Message = { 
-      ...baseMessage,
-      scheduledTime,
-      endTime
+      amount: messageData.amount || null,
+      scheduledTime: messageData.scheduledTime || '',
+      endTime: messageData.endTime || null
     };
     
     this.messages.set(id, newMessage);
@@ -279,33 +257,8 @@ export class MemStorage implements IStorage {
       return undefined;
     }
     
-    // 創建基本更新字段對象
-    const baseUpdates = { ...messageData };
-    delete baseUpdates.scheduledTime;
-    delete baseUpdates.endTime;
-    
-    // 創建更新後的消息對象
-    const updatedMessage = { ...existingMessage, ...baseUpdates };
-    
-    // 處理 scheduledTime
-    if (messageData.scheduledTime !== undefined) {
-      if (messageData.scheduledTime instanceof Date) {
-        updatedMessage.scheduledTime = messageData.scheduledTime;
-      } else {
-        updatedMessage.scheduledTime = new Date(messageData.scheduledTime);
-      }
-    }
-    
-    // 處理 endTime
-    if (messageData.endTime !== undefined) {
-      if (messageData.endTime === null) {
-        updatedMessage.endTime = null;
-      } else if (messageData.endTime instanceof Date) {
-        updatedMessage.endTime = messageData.endTime;
-      } else {
-        updatedMessage.endTime = new Date(messageData.endTime);
-      }
-    }
+    // 直接使用字符串格式的日期，不需要特殊處理
+    const updatedMessage = { ...existingMessage, ...messageData };
     
     this.messages.set(id, updatedMessage);
     return updatedMessage;
@@ -321,41 +274,19 @@ export class MemStorage implements IStorage {
   }
 
   async updateSettings(settingsData: Partial<InsertSettings>): Promise<Settings> {
-    // 創建基本更新字段對象，排除日期
-    const baseUpdates = { ...settingsData };
-    delete baseUpdates.lastSynced;
-    
-    // 處理日期
-    let lastSyncedDate: Date | null = null;
-    if (settingsData.lastSynced !== undefined) {
-      if (settingsData.lastSynced === null) {
-        lastSyncedDate = null;
-      } else if (settingsData.lastSynced instanceof Date) {
-        lastSyncedDate = settingsData.lastSynced;
-      } else {
-        lastSyncedDate = new Date(settingsData.lastSynced);
-      }
-    }
-    
+    // 直接使用字符串格式的日期，不需要特殊處理
     if (!this.settings) {
       // 創建新設置
       this.settings = {
         id: 1,
         lineApiToken: settingsData.lineApiToken || "",
         lineChannelSecret: settingsData.lineChannelSecret || "",
-        lastSynced: lastSyncedDate || new Date(),
+        lastSynced: settingsData.lastSynced || new Date().toISOString(),
         isConnected: settingsData.isConnected || false
       };
     } else {
       // 更新現有設置
-      const updated = { ...this.settings, ...baseUpdates };
-      
-      // 只有在lastSynced有指定時才更新它
-      if (settingsData.lastSynced !== undefined) {
-        updated.lastSynced = lastSyncedDate;
-      }
-      
-      this.settings = updated;
+      this.settings = { ...this.settings, ...settingsData };
     }
     
     return this.settings;

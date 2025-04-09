@@ -28,13 +28,13 @@ export const insertTemplateSchema = createInsertSchema(templates).pick({
   type: true,
 });
 
-// Message schema
+// Message schema - 使用字符串表示日期，這樣更容易與前端交互
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  scheduledTime: timestamp("scheduled_time").notNull(),
-  endTime: timestamp("end_time"),
+  scheduledTime: text("scheduled_time").notNull(), // 改用text而不是timestamp
+  endTime: text("end_time"),                       // 改用text而不是timestamp
   type: text("type").notNull(), // 'single' or 'periodic'
   status: text("status").notNull().default("scheduled"), // 'scheduled', 'sent', 'failed'
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -43,8 +43,8 @@ export const messages = pgTable("messages", {
   amount: text("amount"), // 金額
 });
 
-// 創建基本的 insert schema
-const baseMessageSchema = createInsertSchema(messages).pick({
+// 對於Insert操作，直接使用基本的schema定義
+export const insertMessageSchema = createInsertSchema(messages).pick({
   title: true,
   content: true,
   scheduledTime: true,
@@ -56,32 +56,21 @@ const baseMessageSchema = createInsertSchema(messages).pick({
   amount: true,
 });
 
-// 擴展以處理日期字段，讓它們接受字符串或Date對象
-export const insertMessageSchema = baseMessageSchema.extend({
-  scheduledTime: z.union([z.string(), z.date()]),
-  endTime: z.union([z.string(), z.date(), z.null()]).optional(),
-});
-
 // Settings schema
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   lineApiToken: text("line_api_token"),
   lineChannelSecret: text("line_channel_secret"),
-  lastSynced: timestamp("last_synced"),
+  lastSynced: text("last_synced"), // 改用text而不是timestamp
   isConnected: boolean("is_connected").default(false),
 });
 
-// 創建基本的 settings schema
-const baseSettingsSchema = createInsertSchema(settings).pick({
+// 直接使用基本schema
+export const insertSettingsSchema = createInsertSchema(settings).pick({
   lineApiToken: true,
   lineChannelSecret: true,
   lastSynced: true,
   isConnected: true,
-});
-
-// 擴展以處理日期字段
-export const insertSettingsSchema = baseSettingsSchema.extend({
-  lastSynced: z.union([z.string(), z.date(), z.null()]).optional(),
 });
 
 // Type definitions
