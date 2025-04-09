@@ -8,10 +8,14 @@ import ScheduleList from "../components/ScheduleList";
 import { Group, Message } from "@shared/schema";
 import { format } from "date-fns";
 import { zhTW } from "date-fns/locale";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useMediaQuery } from "react-responsive";
 
 export default function ScheduleManagement() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"calendar" | "list">("calendar");
+  const isMobile = useIsMobile();
+  const isTablet = useMediaQuery({ minWidth: 768, maxWidth: 1023 });
   
   // Fetch groups
   const { data: groups, isLoading: isLoadingGroups } = useQuery<Group[]>({
@@ -63,7 +67,7 @@ export default function ScheduleManagement() {
   return (
     <div className="space-y-6">
       {/* 視圖選擇 */}
-      <div className="flex justify-between items-center">
+      <div className={`flex ${isMobile ? "flex-col" : "justify-between"} items-center gap-4`}>
         <h1 className="text-2xl font-semibold flex items-center">
           <i className="fas fa-calendar-alt mr-2 text-primary"></i> 排程管理
         </h1>
@@ -92,17 +96,17 @@ export default function ScheduleManagement() {
         <div className="grid grid-cols-1 gap-6">
           {/* 日曆區塊 */}
           <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="md:w-auto">
+            <CardContent className={isMobile ? "p-4" : "p-6"}>
+              <div className="flex justify-center">
+                <div className={isMobile ? "w-full" : "w-auto"}>
                   <Calendar
                     mode="single"
                     selected={selectedDate}
                     onSelect={setSelectedDate}
                     locale={zhTW}
-                    className="border rounded-md p-3 bg-white w-full"
+                    className={`border rounded-md ${isMobile ? "p-2" : "p-3"} bg-white w-full`}
                   />
-                  <div className="mt-2 text-sm text-gray-600">
+                  <div className="mt-2 text-sm text-gray-600 text-center">
                     <p>已選擇日期: {selectedDate ? format(selectedDate, "yyyy/MM/dd") : "未選擇"}</p>
                   </div>
                 </div>

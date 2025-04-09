@@ -97,42 +97,44 @@ export default function ScheduleList({ messages, groups, hideTitle = false, comp
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50">
-                  <TableHead className="font-medium">日期時間</TableHead>
-                  <TableHead className="font-medium">訊息類型</TableHead>
-                  <TableHead className="font-medium">發送對象</TableHead>
-                  {!compact && <TableHead className="font-medium">訊息內容</TableHead>}
-                  <TableHead className="font-medium">狀態</TableHead>
-                  <TableHead className="text-center font-medium">操作</TableHead>
+                  <TableHead className="font-medium text-xs sm:text-sm">日期時間</TableHead>
+                  <TableHead className="font-medium text-xs sm:text-sm">訊息類型</TableHead>
+                  <TableHead className="font-medium text-xs sm:text-sm">發送對象</TableHead>
+                  {!compact && <TableHead className="font-medium text-xs sm:text-sm">訊息內容</TableHead>}
+                  <TableHead className="font-medium text-xs sm:text-sm">狀態</TableHead>
+                  <TableHead className="text-center font-medium text-xs sm:text-sm">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {scheduledMessages.length > 0 ? (
                   scheduledMessages.map((message) => (
                     <TableRow key={message.id} className="border-b border-gray-200 hover:bg-gray-50">
-                      <TableCell className="py-3">
-                        {format(new Date(message.scheduledTime), "yyyy/MM/dd HH:mm:ss")}
+                      <TableCell className="py-2 sm:py-3 text-xs sm:text-sm whitespace-nowrap">
+                        {format(new Date(message.scheduledTime), "yyyy/MM/dd HH:mm")}
                       </TableCell>
-                      <TableCell>{message.title}</TableCell>
-                      <TableCell>{getGroupNames(message.groupIds)}</TableCell>
-                      {!compact && <TableCell className="truncate max-w-xs">{message.content}</TableCell>}
-                      <TableCell>{getStatusBadge(message.status)}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{message.title}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{getGroupNames(message.groupIds)}</TableCell>
+                      {!compact && <TableCell className="truncate max-w-xs text-xs sm:text-sm">{message.content}</TableCell>}
+                      <TableCell className="text-xs sm:text-sm">{getStatusBadge(message.status)}</TableCell>
                       <TableCell className="text-center">
-                        <div className="flex justify-center space-x-2">
+                        <div className="flex justify-center space-x-1 sm:space-x-2">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => openDetailsDialog(message)}
                             title="查看詳情"
+                            className="h-7 w-7 sm:h-8 sm:w-8"
                           >
-                            <EditIcon className="h-4 w-4" />
+                            <EditIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDeleteMessage(message.id)}
                             title="刪除訊息"
+                            className="h-7 w-7 sm:h-8 sm:w-8"
                           >
-                            <TrashIcon className="h-4 w-4" />
+                            <TrashIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </TableCell>
