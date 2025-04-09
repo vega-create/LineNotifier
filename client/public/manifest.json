@@ -1,0 +1,17 @@
+{
+  "name": "智慧媽咪 LINE 通知系統",
+  "short_name": "LINE 通知",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#b6295f",
+  "description": "智慧媽咪 LINE 訊息排程發送系統"
+}
