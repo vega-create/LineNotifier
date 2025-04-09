@@ -146,6 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // 直接使用body數據，因為我們已經修改了schema來接受字符串日期
       const messageData = req.body;
+      console.log("POST /messages - Received data:", JSON.stringify(messageData));
       const message = await storage.createMessage(messageData);
 
       // In a real implementation, this would send the message to LINE
@@ -153,6 +154,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(message);
     } catch (err) {
+      console.error("POST /messages - Error:", err);
+      console.error("Request body:", JSON.stringify(req.body));
+      if (err instanceof Error) {
+        return res.status(500).json({ error: err.message });
+      }
       handleZodError(err, res);
     }
   });

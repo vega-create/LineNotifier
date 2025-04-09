@@ -199,6 +199,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       }
     } catch (error) {
       console.error("Error sending message:", error);
+      alert(`發送消息時發生錯誤：${error instanceof Error ? error.message : JSON.stringify(error)}`);
     }
   };
 

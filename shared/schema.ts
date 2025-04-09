@@ -37,7 +37,7 @@ export const messages = pgTable("messages", {
   endTime: text("end_time"),                       // 改用text而不是timestamp
   type: text("type").notNull(), // 'single' or 'periodic'
   status: text("status").notNull().default("scheduled"), // 'scheduled', 'sent', 'failed'
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: text("created_at").notNull().default(''),
   groupIds: text("group_ids").array().notNull(), // Array of group IDs
   currency: text("currency"), // 'TWD', 'AUD', 'USD'
   amount: text("amount"), // 金額
