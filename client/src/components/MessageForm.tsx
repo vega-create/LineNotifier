@@ -218,7 +218,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       groups: ["1"],
       scheduledDate: new Date(),
       startTime: "16:00",
-      endTime: "18:00",
+      endTime: "16:15", // 修改為15分鐘間隔
       currency: "TWD",
       amount: "",
     });
