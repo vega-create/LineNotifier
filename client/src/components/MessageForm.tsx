@@ -157,12 +157,20 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
         amount: data.amount
       };
       
+      // 定義響應類型
+      interface MessageResponse {
+        id: number;
+        title: string;
+        content: string;
+        [key: string]: any;
+      }
+      
       if (existingMessage) {
         // 編輯現有消息
-        await apiRequest("PUT", `/api/messages/${existingMessage.id}`, messageData);
+        await apiRequest<MessageResponse>("PUT", `/api/messages/${existingMessage.id}`, messageData);
       } else {
         // 創建新消息
-        await apiRequest("POST", "/api/messages", messageData);
+        await apiRequest<MessageResponse>("POST", "/api/messages", messageData);
         
         // 只有在創建新消息時才重置表單
         form.reset({

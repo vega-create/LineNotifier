@@ -81,8 +81,13 @@ export default function SettingsPage() {
       // 取得表單資料
       const formData = form.getValues();
       
-      // 使用特定的API測試LINE連接
-      const response = await apiRequest("POST", "/api/test-line-connection", {
+      // 使用特定的API測試LINE連接，並定義響應類型
+      interface TestConnectionResponse {
+        success: boolean;
+        error?: string;
+      }
+      
+      const response = await apiRequest<TestConnectionResponse>("POST", "/api/test-line-connection", {
         lineApiToken: formData.lineApiToken,
         lineChannelSecret: formData.lineChannelSecret,
       });
