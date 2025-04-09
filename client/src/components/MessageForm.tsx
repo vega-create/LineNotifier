@@ -46,7 +46,6 @@ type MessageFormProps = {
 export default function MessageForm({ groups, templates, onSuccess, existingMessage }: MessageFormProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
-  const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   
   // 設置默認值，考慮是否存在現有消息
@@ -68,10 +67,10 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
         content: "",
         type: "single" as const,
         multiGroup: false,
-        groups: ["1"], // Default to first group
+        groups: ["2"], // 默認為第二個群組（Anna群），而非第一個（小幫手）
         scheduledDate: new Date(),
         startTime: "16:00",
-        endTime: "18:00",
+        endTime: "16:15", // 修改為15分鐘間隔
         currency: "TWD", // 預設台幣
         amount: "",
       };
@@ -187,7 +186,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
           content: "",
           type: "single" as const,
           multiGroup: false,
-          groups: ["1"],
+          groups: ["2"], // 預設為Anna群組
           scheduledDate: new Date(),
           startTime: "16:00",
           endTime: "18:00",
@@ -215,7 +214,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       content: "",
       type: "single" as const,
       multiGroup: false,
-      groups: ["1"],
+      groups: ["2"], // 預設為Anna群組
       scheduledDate: new Date(),
       startTime: "16:00",
       endTime: "16:15", // 修改為15分鐘間隔
@@ -234,7 +233,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
             
             <div className="flex items-center">
               <div className="relative mr-2">
-                <Select defaultValue="1">
+                <Select defaultValue="2">
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="選擇群組" />
                   </SelectTrigger>
@@ -248,9 +247,13 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
                 </Select>
               </div>
               
-              <Button onClick={() => setIsAddGroupModalOpen(true)}>
-                <i className="fas fa-plus mr-1"></i> 新增群組
-              </Button>
+              <a href="/groups">
+                <Button 
+                  variant="outline"
+                >
+                  <i className="fas fa-cog mr-1"></i> 群組設定
+                </Button>
+              </a>
             </div>
           </div>
         </CardHeader>
@@ -366,7 +369,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
                         </FormItem>
                       )}
                     />
-                    {/* 移除新增群組按鈕，避免與頁面上方按鈕混淆 */}
+                    {/* 移除新增群組按鈕，避免與頁面上方按鈕混淆。使用者應該前往群組管理頁面進行編輯 */}
                   </div>
                 </div>
                 
@@ -612,43 +615,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
         </DialogContent>
       </Dialog>
       
-      {/* 新增群組對話框 */}
-      <Dialog open={isAddGroupModalOpen} onOpenChange={setIsAddGroupModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>新增LINE群組</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">群組名稱</label>
-              <Input placeholder="例：客戶群組A" />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">LINE群組ID</label>
-              <Input placeholder="例：C24f17b1dc3008dc83f4c60bfe80f0db0" />
-              <p className="text-xs text-gray-500 mt-1">請從LINE開發者頁面獲取群組ID</p>
-            </div>
-
-            <DialogFooter className="flex justify-between gap-2">
-              <Button variant="outline" onClick={() => setIsAddGroupModalOpen(false)}>
-                取消
-              </Button>
-              <Button 
-                onClick={() => {
-                  // 這裡會新增群組
-                  setIsAddGroupModalOpen(false);
-                  // 重新整理群組列表
-                  queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
-                }}
-              >
-                新增群組
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* 移除新增群組對話框，改由群組管理頁面處理 */}
     </>
   );
 }
