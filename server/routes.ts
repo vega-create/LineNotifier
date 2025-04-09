@@ -14,6 +14,9 @@ import fetch from "node-fetch";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const router = express.Router();
+  
+  // 新增訊息檢查計時器 - 每分鐘檢查一次，查找需要發送的訊息
+  let messageCheckInterval: NodeJS.Timeout | null = null;
 
   // Error handling middleware for Zod validation errors
   const handleZodError = (err: unknown, res: Response) => {
@@ -154,8 +157,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Validation passed:", validated);
         const message = await storage.createMessage(validated);
         
-        // In a real implementation, this would send the message to LINE
-        // or schedule it for sending later
+        // 自動在3分鐘後發送訊息
+        console.log(`訊息已排程，將在約3分鐘後自動發送 (ID: ${message.id})`);
+        
+        // 設定定時任務在3分鐘後自動發送訊息
+        setTimeout(async () => {
+          try {
+            console.log(`準備自動發送訊息 (ID: ${message.id})`);
+            // 檢查訊息是否仍然存在（未被刪除或取消）
+            const checkMessage = await storage.getMessage(message.id);
+            if (!checkMessage) {
+              console.log(`訊息 ID: ${message.id} 已不存在，跳過自動發送`);
+              return;
+            }
+            
+            // 發送訊息，使用已有的/send-message API路由
+            const sendResponse = await fetch(`http://localhost:5000/api/send-message`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messageId: message.id })
+            });
+            
+            const responseData = await sendResponse.json();
+            console.log(`自動發送訊息結果:`, responseData);
+          } catch (autoSendError) {
+            console.error(`自動發送訊息失敗 (ID: ${message.id}):`, autoSendError);
+          }
+        }, 3 * 60 * 1000); // 3分鐘 = 3 * 60 * 1000毫秒
         
         res.status(201).json(message);
       } catch (zodError) {
