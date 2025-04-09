@@ -321,15 +321,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSuccessful = results.every(r => r.success);
       const newStatus = allSuccessful ? "sent" : "partial";
       
-      const updatedMessage = await storage.updateMessage(message.id, {
-        status: newStatus
-      });
+      // If message was successfully sent, delete it
+      let response;
+      if (allSuccessful) {
+        // Delete the message if successfully sent
+        await storage.deleteMessage(message.id);
+        response = { 
+          success: true, 
+          deleted: true,
+          results
+        };
+      } else {
+        // If not fully successful, just update status
+        const updatedMessage = await storage.updateMessage(message.id, {
+          status: newStatus
+        });
+        
+        response = { 
+          success: false, 
+          message: updatedMessage,
+          results
+        };
+      }
       
-      res.json({ 
-        success: allSuccessful, 
-        message: updatedMessage,
-        results
-      });
+      res.json(response);
     } catch (err) {
       console.error("Error sending message:", err);
       res.status(500).json({ error: "Failed to send message" });

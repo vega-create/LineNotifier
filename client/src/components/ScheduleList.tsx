@@ -4,15 +4,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Group, Message } from "@shared/schema";
+import { Group, Message, Template } from "@shared/schema";
 import { format } from "date-fns";
 import { 
   Edit as EditIcon, 
   Trash2 as TrashIcon,
+  FileEdit as FileEditIcon,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import MessageForm from "./MessageForm";
 
 type ScheduleListProps = {
   messages: Message[];
@@ -25,6 +28,13 @@ export default function ScheduleList({ messages, groups, hideTitle = false, comp
   const { toast } = useToast();
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [messageToEdit, setMessageToEdit] = useState<Message | null>(null);
+
+  // 獲取模板數據
+  const { data: templates = [] } = useQuery<Template[]>({
+    queryKey: ["/api/templates"],
+  });
 
   // Sort messages by scheduled time
   const scheduledMessages = [...messages]
@@ -55,6 +65,21 @@ export default function ScheduleList({ messages, groups, hideTitle = false, comp
   const openDetailsDialog = (message: Message) => {
     setSelectedMessage(message);
     setIsDetailsOpen(true);
+  };
+  
+  const openEditDialog = (message: Message) => {
+    setMessageToEdit(message);
+    setIsEditOpen(true);
+  };
+  
+  const handleEditSuccess = () => {
+    setIsEditOpen(false);
+    setMessageToEdit(null);
+    queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    toast({
+      title: "訊息已更新",
+      description: "排程訊息已成功更新。",
+    });
   };
 
   const getGroupNames = (groupIds: string[]) => {
@@ -127,6 +152,17 @@ export default function ScheduleList({ messages, groups, hideTitle = false, comp
                           >
                             <EditIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
+                          {message.status === 'scheduled' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditDialog(message)}
+                              title="編輯訊息"
+                              className="h-7 w-7 sm:h-8 sm:w-8"
+                            >
+                              <FileEditIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -204,6 +240,24 @@ export default function ScheduleList({ messages, groups, hideTitle = false, comp
                 </Button>
               </DialogFooter>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* 編輯訊息對話框 */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>編輯排程訊息</DialogTitle>
+          </DialogHeader>
+          
+          {messageToEdit && templates && (
+            <MessageForm 
+              groups={groups} 
+              templates={templates}
+              onSuccess={handleEditSuccess}
+              existingMessage={messageToEdit}
+            />
           )}
         </DialogContent>
       </Dialog>

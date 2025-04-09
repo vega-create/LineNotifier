@@ -21,6 +21,7 @@ import MessageTemplateSelector from "./MessageTemplateSelector";
 import ScheduleSelector from "./ScheduleSelector";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import { format } from "date-fns";
 
 const formSchema = z.object({
   title: z.string().min(1, "訊息標題不能為空"),
@@ -39,28 +40,45 @@ type MessageFormProps = {
   groups: Group[];
   templates: Template[];
   onSuccess?: () => void;
+  existingMessage?: Message;
 };
 
-export default function MessageForm({ groups, templates, onSuccess }: MessageFormProps) {
+export default function MessageForm({ groups, templates, onSuccess, existingMessage }: MessageFormProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   
+  // 設置默認值，考慮是否存在現有消息
+  const defaultValues = existingMessage 
+    ? {
+        title: existingMessage.title,
+        content: existingMessage.content,
+        type: existingMessage.type === "periodic" ? "periodic" : "single",
+        multiGroup: existingMessage.groupIds.length > 1,
+        groups: existingMessage.groupIds,
+        scheduledDate: new Date(existingMessage.scheduledTime),
+        startTime: format(new Date(existingMessage.scheduledTime || new Date()), "HH:mm"),
+        endTime: format(new Date(existingMessage.endTime || new Date()), "HH:mm"),
+        currency: existingMessage.currency || "TWD",
+        amount: existingMessage.amount || "",
+      }
+    : {
+        title: "",
+        content: "",
+        type: "single" as const,
+        multiGroup: false,
+        groups: ["1"], // Default to first group
+        scheduledDate: new Date(),
+        startTime: "16:00",
+        endTime: "18:00",
+        currency: "TWD", // 預設台幣
+        amount: "",
+      };
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      content: "",
-      type: "single",
-      multiGroup: false,
-      groups: ["1"], // Default to first group
-      scheduledDate: new Date(),
-      startTime: "16:00",
-      endTime: "18:00",
-      currency: "TWD", // 預設台幣
-      amount: "",
-    },
+    defaultValues,
   });
 
   const watchType = form.watch("type");
@@ -136,22 +154,27 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
         amount: data.amount
       };
       
-      // Send message data to API
-      await apiRequest("POST", "/api/messages", messageData);
-      
-      // Reset form
-      form.reset({
-        title: "",
-        content: "",
-        type: "single",
-        multiGroup: false,
-        groups: ["1"],
-        scheduledDate: new Date(),
-        startTime: "16:00",
-        endTime: "18:00",
-        currency: "TWD",
-        amount: "",
-      });
+      if (existingMessage) {
+        // 編輯現有消息
+        await apiRequest("PUT", `/api/messages/${existingMessage.id}`, messageData);
+      } else {
+        // 創建新消息
+        await apiRequest("POST", "/api/messages", messageData);
+        
+        // 只有在創建新消息時才重置表單
+        form.reset({
+          title: "",
+          content: "",
+          type: "single" as const,
+          multiGroup: false,
+          groups: ["1"],
+          scheduledDate: new Date(),
+          startTime: "16:00",
+          endTime: "18:00",
+          currency: "TWD",
+          amount: "",
+        });
+      }
       
       // Invalidate messages cache to refresh any lists
       queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
@@ -169,7 +192,7 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
     form.reset({
       title: "",
       content: "",
-      type: "single",
+      type: "single" as const,
       multiGroup: false,
       groups: ["1"],
       scheduledDate: new Date(),
