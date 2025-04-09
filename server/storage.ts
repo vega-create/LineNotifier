@@ -59,7 +59,7 @@ export class MemStorage implements IStorage {
     // Add default groups
     const defaultGroups: InsertGroup[] = [
       { name: "小幫手", lineId: "C24f17b1dc3008dc83f4c60bfe80f0db0" },
-      { name: "Anna群", lineId: "Cc01842ccc97459ae901b6d4779d8f345" },
+      { name: "Anna群", lineId: "Cc01842ccc97459ae901b6d4779d8f345" }, // 已確認此ID可以正常發送
       { name: "雅涵群", lineId: "C03ac887829a325a840fc462b91fcbbd7" },
       { name: "架站工作室（文良）", lineId: "Ce22eadb63c13baf632b0c7d5ac5536f4" },
       { name: "網站工程師（佑展工程師）", lineId: "Cc4237c4173ca718ab0e30eae2e7ca529" },

@@ -334,18 +334,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("無法讀取回應內容:", e);
       }
       
+      // 檢查回應是否為HTML格式（通常是錯誤頁面）
+      if (resultText.trim().startsWith('<!DOCTYPE') || resultText.trim().startsWith('<html')) {
+        console.error("收到HTML回應而非JSON:", resultText.substring(0, 200) + "...");
+        throw new Error("LINE API 返回了HTML頁面而非JSON，可能是TOKEN無效或API伺服器問題");
+      }
+      
       let result;
       try {
-        result = JSON.parse(resultText);
+        if (resultText.trim()) {
+          result = JSON.parse(resultText);
+        } else {
+          // 空回應處理
+          result = { success: true, note: "Empty response from LINE API (this is sometimes normal)" };
+        }
       } catch (e) {
-        result = { raw: resultText };
         console.error("無法解析JSON回應:", e);
+        console.error("原始文本:", resultText);
+        result = { raw: resultText };
+        // 不拋出錯誤，繼續處理
       }
       
       if (!response.ok) {
         console.error(`LINE API錯誤: 狀態碼=${response.status}, 訊息=${response.statusText}`);
         console.error("LINE API錯誤詳情:", result);
-        throw new Error(`LINE API Error (${response.status}): ${result.message || resultText}`);
+        throw new Error(`LINE API Error (${response.status}): ${result?.message || response.statusText || resultText}`);
       }
       
       return result;
@@ -532,18 +545,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`訊息內容: ${content}`);
       
       // 使用 LINE API 發送訊息
-      const result = await sendLineMessage(group.lineId, content);
-      
-      return res.json({ 
-        success: true, 
-        message: `已發送訊息到群組: ${group.name}`,
-        result,
-        group: {
-          id: group.id,
-          name: group.name,
-          lineId: group.lineId
+      try {
+        const result = await sendLineMessage(group.lineId, content);
+        
+        return res.json({ 
+          success: true, 
+          message: `已發送訊息到群組: ${group.name}`,
+          result,
+          group: {
+            id: group.id,
+            name: group.name,
+            lineId: group.lineId
+          }
+        });
+      } catch (sendError) {
+        console.error("發送LINE訊息時出錯:", sendError);
+        let errorMessage = String(sendError);
+        
+        // 檢查是否為HTML回應（通常是LINE API問題）
+        if (sendError instanceof Error && sendError.message.includes("<!DOCTYPE")) {
+          errorMessage = "LINE API回傳了非預期的HTML回應，請檢查API配置及Token是否有效";
         }
-      });
+        
+        return res.status(500).json({ 
+          success: false, 
+          error: errorMessage,
+          details: sendError instanceof Error ? sendError.message : String(sendError)
+        });
+      }
     } catch (error) {
       console.error("測試發送失敗:", error);
       return res.status(500).json({ 
