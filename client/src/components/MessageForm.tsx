@@ -43,6 +43,7 @@ type MessageFormProps = {
 
 export default function MessageForm({ groups, templates, onSuccess }: MessageFormProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -424,28 +425,31 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
               {/* Schedule Settings */}
               <ScheduleSelector form={form} />
 
+
+
               {/* Action buttons */}
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row justify-between gap-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleClearForm}
+                  className="w-full sm:w-auto"
                 >
                   清除內容
                 </Button>
                 
-                <div className="flex">
+                <div className="flex w-full sm:w-auto">
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-r-none"
+                    className="w-1/2 sm:w-auto rounded-r-none"
                     onClick={() => setIsPreviewOpen(true)}
                   >
                     預覽
                   </Button>
                   <Button 
                     type="submit"
-                    className="bg-green-500 hover:bg-green-600 rounded-l-none"
+                    className="w-1/2 sm:w-auto bg-green-500 hover:bg-green-600 rounded-l-none"
                   >
                     發送至LINE群組
                   </Button>
@@ -458,7 +462,7 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>訊息預覽</DialogTitle>
           </DialogHeader>
@@ -511,6 +515,55 @@ export default function MessageForm({ groups, templates, onSuccess }: MessageFor
             
             <DialogFooter>
               <Button onClick={() => setIsPreviewOpen(false)}>關閉</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 自訂按鈕對話框 */}
+      <Dialog open={isCustomModalOpen} onOpenChange={setIsCustomModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>新增自訂按鈕</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">按鈕類型</label>
+              <div className="flex flex-col space-y-2">
+                <label className="flex items-center space-x-2">
+                  <input type="radio" name="buttonType" value="url" className="radio" defaultChecked />
+                  <span className="text-sm">網址連結</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="radio" name="buttonType" value="text" className="radio" />
+                  <span className="text-sm">文字訊息</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">按鈕文字</label>
+              <Input placeholder="例：點擊查看詳情" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">目標網址或回覆文字</label>
+              <Input placeholder="https:// 或要回覆的訊息" />
+            </div>
+
+            <DialogFooter className="flex justify-between gap-2">
+              <Button variant="outline" onClick={() => setIsCustomModalOpen(false)}>
+                取消
+              </Button>
+              <Button 
+                onClick={() => {
+                  // 這裡會加入按鈕到訊息中
+                  setIsCustomModalOpen(false);
+                }}
+              >
+                新增按鈕
+              </Button>
             </DialogFooter>
           </div>
         </DialogContent>

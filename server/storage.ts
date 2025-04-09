@@ -58,12 +58,14 @@ export class MemStorage implements IStorage {
   private initializeDefaultData() {
     // Add default groups
     const defaultGroups: InsertGroup[] = [
-      { name: "小幫手", lineId: "line_group_1" },
-      { name: "專案群組", lineId: "line_group_2" },
-      { name: "部門通知", lineId: "line_group_3" },
-      { name: "企劃部", lineId: "line_group_4" },
-      { name: "研發團隊", lineId: "line_group_5" },
-      { name: "行政部門", lineId: "line_group_6" }
+      { name: "小幫手", lineId: "C24f17b1dc3008dc83f4c60bfe80f0db0" },
+      { name: "Anna群", lineId: "Cc01842ccc97459ae901b6d4779d8f345" },
+      { name: "雅涵群", lineId: "C03ac887829a325a840fc462b91fcbbd7" },
+      { name: "架站工作室（文良）", lineId: "Ce22eadb63c13baf632b0c7d5ac5536f4" },
+      { name: "網站工程師（佑展工程師）", lineId: "Cc4237c4173ca718ab0e30eae2e7ca529" },
+      { name: "Tina群", lineId: "C164037891996ce50ce13c0cba24e154f" },
+      { name: "網站設計師（土棠）", lineId: "Cf1b26d83e385242632b3970b3f8c622f" },
+      { name: "工程師組", lineId: "C536c0214d33c80eeac1b084953dd168b" }
     ];
 
     defaultGroups.forEach(group => {
@@ -72,13 +74,14 @@ export class MemStorage implements IStorage {
 
     // Add default templates
     const defaultTemplates: InsertTemplate[] = [
-      { name: "會議提醒", content: "親愛的團隊成員，請記得參加今天的會議。", type: "meeting" },
-      { name: "放假通知", content: "親愛的同仁，公司將於下週一放假一天，請知悉。", type: "holiday" },
-      { name: "專案進度詢問", content: "請各位夥伴回報目前的專案進度，謝謝！", type: "project" },
-      { name: "入帳通知", content: "本月薪資已入帳，請查收，謝謝。", type: "payment" },
-      { name: "發票寄送通知", content: "本月發票已寄出，請查收，謝謝。", type: "invoice" },
-      { name: "自我介紹", content: "大家好，我是新加入的團隊成員。", type: "introduction" },
-      { name: "收款通知", content: "本期款項已於今日收到，請確認入帳，謝謝。", type: "payment" }
+      { name: "自訂", content: "", type: "custom" },
+      { name: "會議提醒", content: "親愛的團隊成員，請記得參加今天 14:00 的專案會議。地點：台北市松山區南京東路三段275號。", type: "meeting" },
+      { name: "放假通知", content: "各位同仁好，\n智慧媽咪將於 5/1 勞動節放假一天，5/2 正常上班。\n如有緊急事項請聯繫主管。\n祝大家連假愉快！", type: "holiday" },
+      { name: "專案進度詢問", content: "OOO客戶的網站專案進度如何？是否已完成首頁設計稿？請回報最新進度，謝謝。", type: "project" },
+      { name: "入帳通知", content: "親愛的客戶您好，\n我們已收到您的 6 月份款項。\n感謝您的支持！如有任何問題，歡迎隨時聯繫我們。", type: "payment" },
+      { name: "發票寄送通知", content: "親愛的客戶您好，\n您的電子發票（FY-12345678）已寄至您的電子郵件信箱，請查收。\n如有任何問題，歡迎隨時聯繫我們。", type: "invoice" },
+      { name: "自我介紹", content: "您好，我是智慧媽咪LINE通知系統，負責提醒各項事項，包含：會議通知、請款、入款、發票等寄送通知。\n如需協助請洽客服：02-1234-5678", type: "introduction" },
+      { name: "收款通知", content: "親愛的客戶您好，\n這是7月份的服務費用通知。請於5日前匯款至：\n\n彰化銀行 009\n帳號：96038605494000\n戶名：智慧媽咪國際有限公司\n\n發票將於收到款項後提供，感謝您的合作。", type: "payment" }
     ];
 
     defaultTemplates.forEach(template => {
@@ -101,25 +104,42 @@ export class MemStorage implements IStorage {
         endTime: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2 hours later
         type: "single",
         status: "scheduled",
-        groupIds: ["1"] // Small helper group
+        groupIds: ["1"], // 小幫手群組
+        currency: null,
+        amount: null
       },
       {
         title: "專案進度詢問",
-        content: "請各位夥伴回報目前的專案進度，謝謝！",
+        content: "xxx 客戶的狀況如何了？",
         scheduledTime: yesterday,
         endTime: new Date(yesterday.getTime() + 1 * 60 * 60 * 1000), // 1 hour later
         type: "single",
         status: "sent",
-        groupIds: ["5"] // Development team
+        groupIds: ["8"], // 工程師組
+        currency: null,
+        amount: null
       },
       {
         title: "收款通知",
-        content: "本期款項已於今日收到，請確認入帳，謝謝。",
+        content: "親愛的客戶您好，這個月的費用（NT$5000）。請於5日前匯款至\n彰化銀行 009\n帳號：96038605494000\n戶名：智慧媽咪國際有限公司\n\n發票將於收到款項後提供",
         scheduledTime: new Date(yesterday.setDate(yesterday.getDate() - 3)),
         endTime: new Date(yesterday.getTime() + 30 * 60 * 1000), // 30 min later
         type: "single",
         status: "sent",
-        groupIds: ["6"] // Admin team
+        groupIds: ["2"], // Anna群
+        currency: "TWD",
+        amount: "5000"
+      },
+      {
+        title: "入帳通知",
+        content: "我們已收到您的款項（US$1500）。",
+        scheduledTime: new Date(now.setDate(now.getDate() - 5)),
+        endTime: new Date(now.getTime() + 1 * 60 * 60 * 1000), // 1 hour later
+        type: "single",
+        status: "sent",
+        groupIds: ["6"], // Tina群
+        currency: "USD",
+        amount: "1500"
       }
     ];
 
@@ -131,6 +151,7 @@ export class MemStorage implements IStorage {
     this.settings = {
       id: 1,
       lineApiToken: process.env.LINE_API_TOKEN || "",
+      lineChannelSecret: process.env.LINE_CHANNEL_SECRET || "",
       lastSynced: new Date(),
       isConnected: true
     };
@@ -210,10 +231,15 @@ export class MemStorage implements IStorage {
   async createMessage(message: InsertMessage): Promise<Message> {
     const id = this.messageId++;
     const now = new Date();
+    // 確保必要的字段具有默認值
     const newMessage: Message = { 
       ...message, 
       id,
-      createdAt: now
+      createdAt: now,
+      status: message.status || "scheduled",
+      endTime: message.endTime || null,
+      currency: message.currency || null,
+      amount: message.amount || null
     };
     this.messages.set(id, newMessage);
     return newMessage;
@@ -244,6 +270,7 @@ export class MemStorage implements IStorage {
       this.settings = {
         id: 1,
         lineApiToken: settings.lineApiToken || "",
+        lineChannelSecret: settings.lineChannelSecret || "",
         lastSynced: settings.lastSynced || new Date(),
         isConnected: settings.isConnected || false
       };

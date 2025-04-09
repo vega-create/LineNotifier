@@ -59,12 +59,14 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   lineApiToken: text("line_api_token"),
+  lineChannelSecret: text("line_channel_secret"),
   lastSynced: timestamp("last_synced"),
   isConnected: boolean("is_connected").default(false),
 });
 
 export const insertSettingsSchema = createInsertSchema(settings).pick({
   lineApiToken: true,
+  lineChannelSecret: true,
   lastSynced: true,
   isConnected: true,
 });

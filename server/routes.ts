@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -10,6 +10,7 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import fetch from "node-fetch";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const router = express.Router();
@@ -208,6 +209,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to send LINE messages
+  async function sendLineMessage(
+    lineGroupId: string, 
+    content: string, 
+    lineApiToken: string
+  ) {
+    try {
+      const LINE_API_URL = "https://api.line.me/v2/bot/message/push";
+      
+      const response = await fetch(LINE_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${lineApiToken}`
+        },
+        body: JSON.stringify({
+          to: lineGroupId,
+          messages: [
+            {
+              type: "text",
+              text: content
+            }
+          ]
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        console.error("LINE API Error:", result);
+        throw new Error(`LINE API Error: ${result.message || JSON.stringify(result)}`);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Failed to send LINE message:", error);
+      throw error;
+    }
+  }
+
   // Send message to LINE
   router.post("/send-message", async (req: Request, res: Response) => {
     try {
@@ -223,15 +264,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Message not found" });
       }
       
-      // In a real implementation, this would use the LINE Messaging API SDK
-      // to send the message to the specified groups
-      // For this MVP, we'll just mark the message as sent
+      // Get LINE API settings
+      const settings = await storage.getSettings();
+      
+      if (!settings || !settings.lineApiToken) {
+        return res.status(400).json({ error: "LINE API Token is not configured" });
+      }
+      
+      // Get groups to send to
+      const groups = await Promise.all(
+        message.groupIds.map(async (groupId) => {
+          return await storage.getGroup(parseInt(groupId));
+        })
+      );
+      
+      const validGroups = groups.filter(g => g !== undefined) as any[];
+      
+      if (validGroups.length === 0) {
+        return res.status(400).json({ error: "No valid groups found for this message" });
+      }
+      
+      // Format message content - add currency and amount if present
+      let finalContent = message.content;
+      
+      if (message.currency && message.amount) {
+        let currencySymbol = "";
+        if (message.currency === "TWD") currencySymbol = "NT$";
+        else if (message.currency === "USD") currencySymbol = "US$";
+        else if (message.currency === "AUD") currencySymbol = "AU$";
+        
+        // Add currency+amount if not already in the content
+        if (!finalContent.includes(`${currencySymbol}${message.amount}`)) {
+          finalContent += `\n\n金額: ${currencySymbol}${message.amount}`;
+        }
+      }
+      
+      // Send message to all groups
+      const results = await Promise.all(
+        validGroups.map(async (group) => {
+          try {
+            // Using actual LINE API integration
+            const result = await sendLineMessage(
+              group.lineId, 
+              finalContent, 
+              settings.lineApiToken
+            );
+            return { groupId: group.id, success: true, result };
+          } catch (error) {
+            console.error(`Failed to send to group ${group.name}:`, error);
+            return { groupId: group.id, success: false, error: String(error) };
+          }
+        })
+      );
+      
+      // Update message status based on sending results
+      const allSuccessful = results.every(r => r.success);
+      const newStatus = allSuccessful ? "sent" : "partial";
       
       const updatedMessage = await storage.updateMessage(message.id, {
-        status: "sent"
+        status: newStatus
       });
       
-      res.json({ success: true, message: updatedMessage });
+      res.json({ 
+        success: allSuccessful, 
+        message: updatedMessage,
+        results
+      });
     } catch (err) {
       console.error("Error sending message:", err);
       res.status(500).json({ error: "Failed to send message" });
