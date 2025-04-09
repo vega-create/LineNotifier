@@ -246,11 +246,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const newStatus = allSuccess ? "sent" : "partial";
               await storage.updateMessage(message.id, { status: newStatus });
               
-              // 如果成功發送，則刪除該訊息
+              // 處理訊息發送後的邏輯 - 支持週期性發送
               if (allSuccess) {
-                console.log(`訊息 ID: ${message.id} 已成功發送，現在將其刪除`);
-                const deleteResult = await storage.deleteMessage(message.id);
-                console.log(`Message ${message.id} was successfully sent and deleted (result: ${deleteResult})`);
+                // 檢查是否為週期性訊息且已啟用周期性發送
+                if (message.type === "periodic" && message.recurringActive) {
+                  // 更新最後發送時間，並將狀態重設為排程中
+                  const now = new Date();
+                  await storage.updateMessage(message.id, { 
+                    lastSent: now.toISOString(),
+                    status: "scheduled" // 重置狀態，等待下次發送
+                  });
+                  console.log(`週期性訊息 ID: ${message.id} [${message.title}] 已更新最後發送時間並保留排程`);
+                } else {
+                  // 非週期性訊息或未啟用週期，則刪除
+                  console.log(`訊息 ID: ${message.id} 已成功發送，現在將其刪除`);
+                  const deleteResult = await storage.deleteMessage(message.id);
+                  console.log(`Message ${message.id} was successfully sent and deleted (result: ${deleteResult})`);
+                }
               }
               
               console.log(`自動發送訊息完成 (ID: ${message.id}, 結果: ${allSuccess ? '成功' : '部分失敗'})`);
@@ -376,6 +388,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 檢查並發送週期性訊息
+  // 設置定時任務，每5分鐘檢查一次
+  setInterval(async () => {
+    try {
+      console.log("檢查週期性訊息排程...");
+      const messages = await storage.getMessages();
+      
+      // 篩選出週期性且啟用的訊息
+      const recurringMessages = messages.filter(m => 
+        m.type === "periodic" && m.recurringActive && m.status === "scheduled");
+      
+      if (recurringMessages.length === 0) {
+        console.log("沒有找到啟用的週期性訊息");
+        return;
+      }
+      
+      console.log(`找到 ${recurringMessages.length} 個啟用的週期性訊息`);
+      
+      const now = new Date();
+      
+      for (const message of recurringMessages) {
+        try {
+          // 如果沒有最後發送時間，則設置為訊息創建時間
+          const lastSent = message.lastSent ? new Date(message.lastSent) : new Date(message.createdAt || message.scheduledTime);
+          const scheduledTime = new Date(message.scheduledTime);
+          
+          // 檢查是否應該發送（根據週期性類型判斷）
+          let shouldSend = false;
+          
+          // 從排程時間獲取小時和分鐘，作為每天發送的時間點
+          const scheduledHour = scheduledTime.getHours();
+          const scheduledMinute = scheduledTime.getMinutes();
+          
+          // 當前時間的小時和分鐘
+          const currentHour = now.getHours();
+          const currentMinute = now.getMinutes();
+          
+          console.log(`檢查週期性訊息 ID: ${message.id}, 標題: ${message.title}`);
+          console.log(`上次發送時間: ${lastSent.toISOString()}`);
+          console.log(`排程時間: ${scheduledTime.toISOString()}, ${scheduledHour}:${scheduledMinute}`);
+          console.log(`當前時間: ${now.toISOString()}, ${currentHour}:${currentMinute}`);
+          console.log(`週期類型: ${message.recurringType}`);
+          
+          switch (message.recurringType) {
+            case "daily":
+              // 如果當前時間與設定時間相符（小時和分鐘），且上次發送不是今天
+              if (currentHour === scheduledHour && 
+                  currentMinute >= scheduledMinute && 
+                  currentMinute < scheduledMinute + 5 && // 5分鐘內為有效執行時間
+                  (lastSent.getDate() !== now.getDate() || 
+                   lastSent.getMonth() !== now.getMonth() || 
+                   lastSent.getFullYear() !== now.getFullYear())) {
+                shouldSend = true;
+                console.log(`每日訊息該發送了: ${message.title}`);
+              }
+              break;
+              
+            case "weekly":
+              // 如果當前時間與設定時間相符，且是同一個星期幾，且上次發送不是本週
+              if (currentHour === scheduledHour && 
+                  currentMinute >= scheduledMinute && 
+                  currentMinute < scheduledMinute + 5 &&
+                  now.getDay() === scheduledTime.getDay() && // 同一個星期幾
+                  (now.getTime() - lastSent.getTime() > 6 * 24 * 60 * 60 * 1000)) { // 至少6天前發送的
+                shouldSend = true;
+                console.log(`每週訊息該發送了: ${message.title}`);
+              }
+              break;
+              
+            case "monthly":
+              // 如果當前時間與設定時間相符，且是同一個月份日期，且上次發送不是本月
+              if (currentHour === scheduledHour && 
+                  currentMinute >= scheduledMinute && 
+                  currentMinute < scheduledMinute + 5 &&
+                  now.getDate() === scheduledTime.getDate() && // 同一個月份日期
+                  (now.getMonth() !== lastSent.getMonth() || 
+                   now.getFullYear() !== lastSent.getFullYear())) {
+                shouldSend = true;
+                console.log(`每月訊息該發送了: ${message.title}`);
+              }
+              break;
+              
+            case "yearly":
+              // 如果當前時間與設定時間相符，且是同一個月份和日期，且上次發送不是今年
+              if (currentHour === scheduledHour && 
+                  currentMinute >= scheduledMinute && 
+                  currentMinute < scheduledMinute + 5 &&
+                  now.getDate() === scheduledTime.getDate() && 
+                  now.getMonth() === scheduledTime.getMonth() && // 同一個月份和日期
+                  now.getFullYear() !== lastSent.getFullYear()) { // 不是今年發送的
+                shouldSend = true;
+                console.log(`每年訊息該發送了: ${message.title}`);
+              }
+              break;
+          }
+          
+          // 如果應該發送，執行發送邏輯
+          if (shouldSend) {
+            console.log(`正在發送週期性訊息 ID: ${message.id}, 標題: ${message.title}`);
+            
+            // 獲取所有群組
+            const groups = await Promise.all(
+              message.groupIds.map(async (groupId) => {
+                return await storage.getGroup(parseInt(groupId));
+              })
+            );
+            
+            const validGroups = groups.filter(g => g !== undefined) as Group[];
+            
+            if (validGroups.length === 0) {
+              console.error("找不到有效的群組，跳過發送");
+              continue;
+            }
+            
+            // 格式化訊息內容
+            let finalContent = message.content;
+            
+            if (message.currency && message.amount) {
+              let currencySymbol = "";
+              if (message.currency === "TWD") currencySymbol = "NT$";
+              else if (message.currency === "USD") currencySymbol = "US$";
+              else if (message.currency === "AUD") currencySymbol = "AU$";
+              
+              if (!finalContent.includes(`${currencySymbol}${message.amount}`)) {
+                finalContent += `\n\n金額: ${currencySymbol}${message.amount}`;
+              }
+            }
+            
+            // 進行分段處理
+            finalContent = finalContent.replace(/。(?!\n)/g, "。\n");
+            
+            // 獲取LINE API設定
+            const settings = await storage.getSettings();
+            
+            if (!settings || (!settings.lineApiToken && !process.env.LINE_CHANNEL_ACCESS_TOKEN)) {
+              console.error("LINE API Token未配置，跳過發送");
+              continue;
+            }
+            
+            // 發送訊息到所有群組
+            let allSuccess = true;
+            for (const group of validGroups) {
+              try {
+                console.log(`嘗試發送週期性訊息到群組: ${group.name} (ID: ${group.lineId})`);
+                console.log(`使用的訊息內容: ${finalContent}`);
+                
+                // 使用實際的LINE API發送訊息
+                await sendLineMessage(
+                  group.lineId,
+                  finalContent,
+                  settings.lineApiToken || ""
+                );
+                
+                console.log(`週期性訊息發送成功到群組: ${group.name}`);
+              } catch (error) {
+                console.error(`週期性訊息發送到群組 ${group.name} 失敗:`, error);
+                allSuccess = false;
+              }
+            }
+            
+            // 更新訊息狀態和最後發送時間
+            const newStatus = "scheduled"; // 週期性訊息保持排程狀態
+            await storage.updateMessage(message.id, { 
+              status: newStatus,
+              lastSent: now.toISOString()
+            });
+            
+            console.log(`週期性訊息 ID: ${message.id} 已處理完畢，結果: ${allSuccess ? '成功' : '部分失敗'}`);
+          }
+        } catch (error) {
+          console.error(`處理週期性訊息 ID: ${message.id} 時發生錯誤:`, error);
+        }
+      }
+    } catch (error) {
+      console.error("檢查週期性訊息時發生錯誤:", error);
+    }
+  }, 5 * 60 * 1000); // 5分鐘檢查一次
+  
   // 輔助函數：格式化台灣時間（GMT+8）
   function formatTaiwanTime(date: Date): string {
     // 複製日期對象以避免修改原始日期
@@ -578,20 +768,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSuccessful = results.every(r => r.success);
       const newStatus = allSuccessful ? "sent" : "partial";
       
-      // If message was successfully sent, delete it
+      // 處理成功發送後的邏輯
       let response;
       if (allSuccessful) {
         try {
-          // Delete the message if successfully sent
-          const deleteResult = await storage.deleteMessage(message.id);
-          
-          console.log(`Message ${message.id} was successfully sent and deleted (result: ${deleteResult})`);
-          
-          response = { 
-            success: true, 
-            deleted: true,
-            results
-          };
+          // 檢查是否為週期性訊息並且已啟用週期性發送
+          if (message.type === "periodic" && message.recurringActive) {
+            // 更新最後發送時間並重置狀態為排程中
+            const now = new Date();
+            const updatedMessage = await storage.updateMessage(message.id, {
+              lastSent: now.toISOString(),
+              status: "scheduled" // 重置狀態，等待下次發送
+            });
+            
+            console.log(`週期性訊息 ID: ${message.id} [${message.title}] 已更新最後發送時間並保留排程`);
+            
+            response = {
+              success: true,
+              recurring: true,
+              message: updatedMessage,
+              results
+            };
+          } else {
+            // 非週期性訊息或未啟用週期，則刪除
+            const deleteResult = await storage.deleteMessage(message.id);
+            
+            console.log(`Message ${message.id} was successfully sent and deleted (result: ${deleteResult})`);
+            
+            response = { 
+              success: true, 
+              deleted: true,
+              results
+            };
+          }
         } catch (err) {
           console.error(`Error deleting message: ${err}`);
           

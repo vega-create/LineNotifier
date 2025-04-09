@@ -35,6 +35,10 @@ const formSchema = z.object({
   endTime: z.string(),
   currency: z.string().optional(),
   amount: z.string().optional(),
+  
+  // 週期性發送選項
+  recurringType: z.enum(["daily", "weekly", "monthly", "yearly"]).optional(),
+  recurringActive: z.boolean().default(false),
 });
 
 type MessageFormProps = {
@@ -180,7 +184,11 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
         status: "scheduled",
         groupIds: data.groups,
         currency: data.currency,
-        amount: data.amount
+        amount: data.amount,
+        // 週期性發送選項
+        recurringType: data.type === "periodic" ? data.recurringType : null,
+        recurringActive: data.type === "periodic" ? data.recurringActive : false,
+        lastSent: null // 初始時為null，系統會在第一次發送後更新
       };
       
       // 定義響應類型
@@ -295,11 +303,71 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
                       type="button"
                       variant={watchType === "periodic" ? "default" : "outline"}
                       className="rounded-l-none"
-                      onClick={() => form.setValue("type", "periodic")}
+                      onClick={() => {
+                        form.setValue("type", "periodic");
+                        // 設置默認的週期類型為每日
+                        form.setValue("recurringType", "daily");
+                        form.setValue("recurringActive", true);
+                      }}
                     >
                       週期性發送
                     </Button>
                   </div>
+
+                  {/* 週期性發送選項 - 僅當類型為週期性發送時顯示 */}
+                  {watchType === "periodic" && (
+                    <div className="mt-4 p-3 border rounded-md bg-white">
+                      <FormLabel className="block text-sm font-medium text-gray-700 mb-2">週期設定</FormLabel>
+                      
+                      <FormField
+                        control={form.control}
+                        name="recurringType"
+                        render={({ field }) => (
+                          <FormItem className="mb-4">
+                            <Select
+                              value={field.value || "daily"}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="選擇週期類型" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="daily">每天</SelectItem>
+                                <SelectItem value="weekly">每週</SelectItem>
+                                <SelectItem value="monthly">每月</SelectItem>
+                                <SelectItem value="yearly">每年</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="recurringActive"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                id="recurring-active"
+                              />
+                            </FormControl>
+                            <label 
+                              htmlFor="recurring-active" 
+                              className="text-sm text-gray-700 font-normal leading-none cursor-pointer"
+                            >
+                              啟用週期性發送
+                            </label>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
                 </div>
                 
                 {/* Group Settings */}

@@ -41,6 +41,11 @@ export const messages = pgTable("messages", {
   groupIds: text("group_ids").array().notNull(), // Array of group IDs
   currency: text("currency"), // 'TWD', 'AUD', 'USD'
   amount: text("amount"), // 金額
+  
+  // 週期性發送相關字段
+  recurringType: text("recurring_type"), // 'daily', 'weekly', 'monthly', 'yearly'
+  lastSent: text("last_sent"), // 上次發送時間，用於計算下次發送時間
+  recurringActive: boolean("recurring_active").default(false), // 標記是否啟用週期性發送
 });
 
 // 對於Insert操作，使用自定義的Zod schema以確保更好的驗證
@@ -54,6 +59,11 @@ export const insertMessageSchema = z.object({
   groupIds: z.array(z.string()),
   currency: z.string().nullable().optional(),
   amount: z.string().nullable().optional(),
+  
+  // 週期性發送相關字段
+  recurringType: z.enum(['daily', 'weekly', 'monthly', 'yearly']).nullable().optional(),
+  lastSent: z.string().nullable().optional(),
+  recurringActive: z.boolean().default(false),
 });
 
 // Settings schema
@@ -99,4 +109,8 @@ export type MessageFormData = {
   endTime: string;
   currency?: string; // 'TWD', 'AUD', 'USD'
   amount?: string; // 金額
+  
+  // 週期性發送選項
+  recurringType?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurringActive?: boolean;
 };

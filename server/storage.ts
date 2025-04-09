@@ -101,7 +101,10 @@ export class MemStorage implements IStorage {
         status: "scheduled",
         groupIds: ["2"], // Anna群
         currency: null,
-        amount: null
+        amount: null,
+        recurringType: null,
+        lastSent: null,
+        recurringActive: false
       }
     ];
 
@@ -206,7 +209,10 @@ export class MemStorage implements IStorage {
       currency: messageData.currency || null,
       amount: messageData.amount || null,
       scheduledTime: messageData.scheduledTime || '',
-      endTime: messageData.endTime || null
+      endTime: messageData.endTime || null,
+      recurringType: messageData.recurringType || null,
+      lastSent: messageData.lastSent || null,
+      recurringActive: messageData.recurringActive || false
     };
     
     this.messages.set(id, newMessage);
