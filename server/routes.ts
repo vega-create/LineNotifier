@@ -191,7 +191,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings endpoints
   router.get("/settings", async (_req: Request, res: Response) => {
     try {
-      const settings = await storage.getSettings();
+      let settings = await storage.getSettings();
+      
+      // 將環境變量設定優先於數據庫設定
+      const envToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+      const envSecret = process.env.LINE_CHANNEL_SECRET;
+      
+      // 如果存在環境變量設定，優先使用環境變量
+      if (envToken || envSecret) {
+        const lastSyncedDate = settings?.lastSynced ? new Date(settings.lastSynced) : new Date();
+        
+        const updatedSettings = {
+          ...(settings || {}),
+          lineApiToken: envToken || settings?.lineApiToken,
+          lineChannelSecret: envSecret || settings?.lineChannelSecret,
+          // 如果有環境變量，表示我們有正確的設定，可以標記為已連接
+          isConnected: Boolean(envToken && envSecret) || settings?.isConnected || false,
+          lastSynced: lastSyncedDate
+        };
+        
+        // 更新資料庫中的設定
+        settings = await storage.updateSettings(updatedSettings);
+      }
+      
       res.json(settings || {});
     } catch (err) {
       console.error("Error fetching settings:", err);
@@ -201,8 +223,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   router.put("/settings", async (req: Request, res: Response) => {
     try {
-      const settingsData = insertSettingsSchema.partial().parse(req.body);
-      const updatedSettings = await storage.updateSettings(settingsData);
+      // 確保lastSynced是一個有效的日期
+      let settingsData = { ...req.body };
+      if (typeof settingsData.lastSynced === 'string') {
+        try {
+          // 嘗試解析日期字符串
+          new Date(settingsData.lastSynced);
+        } catch (e) {
+          // 如果無法解析，使用當前時間
+          settingsData.lastSynced = new Date().toISOString();
+        }
+      }
+      
+      const parsedData = insertSettingsSchema.partial().parse(settingsData);
+      const updatedSettings = await storage.updateSettings(parsedData);
       res.json(updatedSettings);
     } catch (err) {
       handleZodError(err, res);
@@ -213,16 +247,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function sendLineMessage(
     lineGroupId: string, 
     content: string, 
-    lineApiToken: string
+    lineApiToken?: string
   ) {
     try {
       const LINE_API_URL = "https://api.line.me/v2/bot/message/push";
+      
+      // 優先使用環境變量中的ACCESS TOKEN，如果沒有則使用傳入的token
+      const token = process.env.LINE_CHANNEL_ACCESS_TOKEN || lineApiToken;
+      
+      if (!token) {
+        throw new Error("LINE Channel Access Token not found");
+      }
       
       const response = await fetch(LINE_API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${lineApiToken}`
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           to: lineGroupId,
@@ -235,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       });
       
-      const result = await response.json();
+      const result = await response.json() as any;
       
       if (!response.ok) {
         console.error("LINE API Error:", result);
@@ -270,6 +311,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!settings || !settings.lineApiToken) {
         return res.status(400).json({ error: "LINE API Token is not configured" });
       }
+      
+      // Ensure lineApiToken is not null
+      const lineApiToken = settings.lineApiToken || "";
       
       // Get groups to send to
       const groups = await Promise.all(
@@ -307,7 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const result = await sendLineMessage(
               group.lineId, 
               finalContent, 
-              settings.lineApiToken
+              lineApiToken
             );
             return { groupId: group.id, success: true, result };
           } catch (error) {
@@ -348,6 +392,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Error sending message:", err);
       res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  // 測試 LINE API 連接
+  router.post("/test-line-connection", async (req: Request, res: Response) => {
+    try {
+      // 檢查環境變量是否設定
+      const envToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+      const envSecret = process.env.LINE_CHANNEL_SECRET;
+      
+      if (!envToken || !envSecret) {
+        // 嘗試從請求中獲取
+        const { lineApiToken, lineChannelSecret } = req.body;
+        
+        if (!lineApiToken || !lineChannelSecret) {
+          return res.status(400).json({ 
+            success: false, 
+            error: "缺少 LINE API Token 或 Channel Secret" 
+          });
+        }
+        
+        // 使用請求中的憑證
+        // 這裡我們只是測試連接，不實際發送訊息
+        // 可以用下面的代碼檢查 TOKEN 是否有效
+        const LINE_API_URL = "https://api.line.me/v2/bot/info";
+        
+        const response = await fetch(LINE_API_URL, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${lineApiToken}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`LINE API 連接失敗: ${response.status} ${response.statusText}`);
+        }
+        
+        // 更新設置
+        const settings = await storage.getSettings();
+        await storage.updateSettings({
+          ...(settings || {}),
+          lineApiToken,
+          lineChannelSecret,
+          isConnected: true,
+          lastSynced: new Date()
+        });
+        
+        res.json({ success: true });
+      } else {
+        // 使用環境變量測試連接
+        const LINE_API_URL = "https://api.line.me/v2/bot/info";
+        
+        const response = await fetch(LINE_API_URL, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${envToken}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`LINE API 連接失敗: ${response.status} ${response.statusText}`);
+        }
+        
+        // 更新設置
+        const settings = await storage.getSettings();
+        await storage.updateSettings({
+          ...(settings || {}),
+          lineApiToken: envToken,
+          lineChannelSecret: envSecret,
+          isConnected: true,
+          lastSynced: new Date()
+        });
+        
+        res.json({ success: true });
+      }
+    } catch (error) {
+      console.error("LINE API 連接測試失敗:", error);
+      res.status(400).json({ 
+        success: false, 
+        error: `連線測試失敗: ${error instanceof Error ? error.message : String(error)}` 
+      });
     }
   });
 

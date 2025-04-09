@@ -78,7 +78,10 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues,
+    defaultValues: {
+      ...defaultValues,
+      type: defaultValues.type as "single" | "periodic",
+    }
   });
 
   const watchType = form.watch("type");

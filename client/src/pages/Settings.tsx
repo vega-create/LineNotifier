@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -39,23 +39,25 @@ export default function SettingsPage() {
   });
 
   // Update form values when settings are loaded
-  useState(() => {
+  useEffect(() => {
     if (settings) {
       form.reset({
         lineApiToken: settings.lineApiToken || "",
         lineChannelSecret: settings.lineChannelSecret || "",
         isConnected: settings.isConnected || false,
-        lastSynced: settings.lastSynced || new Date(),
+        lastSynced: settings.lastSynced ? new Date(settings.lastSynced) : new Date(),
       });
     }
-  });
+  }, [settings, form]);
 
   const handleSaveSettings = async (data: z.infer<typeof formSchema>) => {
     try {
       // Update the settings
       await apiRequest("PUT", "/api/settings", {
-        ...data,
-        lastSynced: new Date(),
+        lineApiToken: data.lineApiToken,
+        lineChannelSecret: data.lineChannelSecret,
+        isConnected: data.isConnected,
+        lastSynced: new Date().toISOString(),
       });
       
       toast({
@@ -76,29 +78,31 @@ export default function SettingsPage() {
 
   const handleTestConnection = async () => {
     try {
-      // 實際上這裡會測試 LINE API 連接狀態
-      // 我們使用您提供的 Channel Secret 和 Access Token
+      // 取得表單資料
       const formData = form.getValues();
       
-      // 更新設定並標記為已連接
-      await apiRequest("PUT", "/api/settings", {
+      // 使用特定的API測試LINE連接
+      const response = await apiRequest("POST", "/api/test-line-connection", {
         lineApiToken: formData.lineApiToken,
         lineChannelSecret: formData.lineChannelSecret,
-        isConnected: true,
-        lastSynced: new Date(),
       });
       
-      toast({
-        title: "連線測試成功",
-        description: "已成功連接至LINE Messaging API。",
-      });
+      if (response.success) {
+        toast({
+          title: "連線測試成功",
+          description: "已成功連接至LINE Messaging API。",
+        });
+      } else {
+        throw new Error(response.error || "未知錯誤");
+      }
       
       // 刷新設定資料
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
     } catch (error) {
+      console.error("LINE API 連線測試失敗:", error);
       toast({
         title: "連線測試失敗",
-        description: "無法連接至LINE Messaging API，請檢查您的 Channel Secret 和 Access Token。",
+        description: `無法連接至LINE Messaging API：${error instanceof Error ? error.message : '請檢查您的 Channel Secret 和 Access Token'}`,
         variant: "destructive",
       });
     }
