@@ -247,13 +247,12 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
                 </Select>
               </div>
               
-              <a href="/groups">
-                <Button 
-                  variant="outline"
-                >
-                  <i className="fas fa-cog mr-1"></i> 群組設定
-                </Button>
-              </a>
+              <Button 
+                variant="outline"
+                onClick={() => window.location.href="/groups"}
+              >
+                <i className="fas fa-plus mr-1"></i> 新增群組
+              </Button>
             </div>
           </div>
         </CardHeader>
