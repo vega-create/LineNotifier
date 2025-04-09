@@ -276,8 +276,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     lineApiToken?: string
   ) {
     try {
-      // 嘗試使用multicast API代替push API
-      const LINE_API_URL = "https://api.line.me/v2/bot/message/multicast"; 
+      // 使用原始的push API
+      const LINE_API_URL = "https://api.line.me/v2/bot/message/push"; 
       console.log(`發送訊息到LINE API的URL: ${LINE_API_URL}`);
       
       // 優先使用環境變量中的ACCESS TOKEN，如果沒有則使用傳入的token
@@ -302,9 +302,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 修改為最新的LINE API規範格式
       let requestBody;
       
-      // 對於multicast API，to需要是陣列格式，不是字符串
+      // 使用原始的push API格式
       requestBody = {
-        to: [lineGroupId],
+        to: lineGroupId,
         messages: [
           {
             type: "text",
@@ -312,7 +312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         ]
       };
-      console.log("使用Multicast訊息API");
+      console.log("使用Push訊息API");
       
       console.log("發送LINE訊息requestBody:", JSON.stringify(requestBody, null, 2));
       
