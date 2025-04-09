@@ -467,12 +467,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // 在排程訊息中添加台灣時間
-      if (!finalContent.includes('台灣時間')) {
-        const now = new Date();
-        const taiwanTimeStr = formatTaiwanTime(now);
-        finalContent += `\n\n發送時間: ${taiwanTimeStr}`;
-      }
+      // 不再添加發送時間
+      // 對訊息內容進行分段處理
+      finalContent = finalContent.replace(/。(?!\n)/g, "。\n");
       
       // Send message to all groups
       const results = await Promise.all(
@@ -596,10 +593,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`測試發送訊息到群組: ${group.name} (${group.lineId})`);
       
-      // 添加台灣時間到訊息內容
-      const now = new Date();
-      const taiwanTimeStr = formatTaiwanTime(now);
-      const finalContent = content + (content.includes('台灣時間') ? '' : ` - ${taiwanTimeStr}`);
+      // 不再添加時間到測試訊息內容，僅對內容進行分段處理
+      let finalContent = content;
+      // 對訊息內容進行分段處理
+      finalContent = finalContent.replace(/。(?!\n)/g, "。\n");
       
       console.log(`訊息內容: ${finalContent}`);
       

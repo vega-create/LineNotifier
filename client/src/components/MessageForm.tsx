@@ -99,7 +99,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       else if (watchCurrency === "USD") currencySymbol = "US$";
       else if (watchCurrency === "AUD") currencySymbol = "AU$";
       
-      // 構建金額字符串
+      // 構建金額字符串 - 確保僅添加一次幣別符號
       const amountStr = `${currencySymbol}${watchAmount}`;
       
       // 檢查訊息內容是否已經包含了金額信息
@@ -107,13 +107,16 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
         // 替換或添加金額信息
         let newContent = watchContent;
         
+        // 先清理掉可能存在的舊的金額信息
+        newContent = newContent.replace(/\n\n金額: (NT\$|US\$|AU\$)?[0-9,.]+/, "");
+        
         // 使用正則表達式嘗試查找並替換現有的金額信息
         const currencyRegex = /(NT\$|US\$|AU\$)[0-9,.]+/;
         if (currencyRegex.test(newContent)) {
           newContent = newContent.replace(currencyRegex, amountStr);
         } else if (watchContent.includes("金額")) {
           // 如果包含"金額"關鍵字，在其後添加金額
-          newContent = newContent.replace(/金額[：:]\s*/, `金額: ${amountStr} `);
+          newContent = newContent.replace(/金額[：:]\s*[^\n]*/, `金額: ${amountStr}`);
         } else {
           // 如果沒有找到適合的位置，直接添加到內容末尾
           newContent = newContent + "\n\n金額: " + amountStr;
