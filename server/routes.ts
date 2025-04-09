@@ -424,30 +424,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSuccessful = results.every(r => r.success);
       const newStatus = allSuccessful ? "sent" : "partial";
       
-      // If message was successfully sent, update status or delete it
+      // If message was successfully sent, delete it
       let response;
       if (allSuccessful) {
         try {
-          // Update message status to "sent"
-          const updatedMessage = await storage.updateMessage(message.id, {
-            status: "sent"
-          });
+          // Delete the message if successfully sent
+          const deleteResult = await storage.deleteMessage(message.id);
           
-          console.log(`Message ${message.id} was successfully sent and marked as sent`);
+          console.log(`Message ${message.id} was successfully sent and deleted (result: ${deleteResult})`);
           
-          // For now, we'll update status instead of deleting to track history
           response = { 
             success: true, 
-            message: updatedMessage,
+            deleted: true,
             results
           };
         } catch (err) {
-          console.error(`Error updating message status: ${err}`);
-          response = { 
-            success: true, 
-            error: `訊息發送成功但更新狀態失敗: ${err}`,
-            results
-          };
+          console.error(`Error deleting message: ${err}`);
+          
+          // 如果刪除失敗，仍然將狀態更新為已發送
+          try {
+            const updatedMessage = await storage.updateMessage(message.id, {
+              status: "sent"
+            });
+            
+            response = { 
+              success: true, 
+              message: updatedMessage,
+              deleteError: `刪除訊息失敗: ${err}`,
+              results
+            };
+          } catch (updateErr) {
+            console.error(`Also failed to update message status: ${updateErr}`);
+            response = { 
+              success: true, 
+              error: `訊息發送成功但刪除及更新狀態均失敗: ${err}, ${updateErr}`,
+              results
+            };
+          }
         }
       } else {
         // If not fully successful, just update status
