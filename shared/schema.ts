@@ -43,18 +43,19 @@ export const messages = pgTable("messages", {
   amount: text("amount"), // 金額
 });
 
-// 對於Insert操作，直接使用基本的schema定義
-export const insertMessageSchema = createInsertSchema(messages).pick({
-  title: true,
-  content: true,
-  scheduledTime: true,
-  endTime: true,
-  type: true,
-  status: true,
-  groupIds: true,
-  currency: true,
-  amount: true,
-});
+// 對於Insert操作，使用基本的schema定義
+export const insertMessageSchema = createInsertSchema(messages)
+  .pick({
+    title: true,
+    content: true,
+    scheduledTime: true,
+    endTime: true,
+    type: true, 
+    status: true,
+    groupIds: true,
+    currency: true,
+    amount: true,
+  });
 
 // Settings schema
 export const settings = pgTable("settings", {

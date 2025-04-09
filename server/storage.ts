@@ -239,7 +239,7 @@ export class MemStorage implements IStorage {
       content: messageData.content,
       type: messageData.type,
       status: messageData.status || "scheduled",
-      createdAt: now.toISOString(),
+      createdAt: now,
       groupIds: messageData.groupIds,
       currency: messageData.currency || null,
       amount: messageData.amount || null,

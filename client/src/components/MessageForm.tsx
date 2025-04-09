@@ -29,7 +29,7 @@ const formSchema = z.object({
   type: z.enum(["single", "periodic"]),
   multiGroup: z.boolean().default(false),
   groups: z.array(z.string()).min(1, "至少選擇一個群組"),
-  scheduledDate: z.date(),
+  scheduledDate: z.date(), // 這裡仍使用date類型以便於UI交互
   startTime: z.string(),
   endTime: z.string(),
   currency: z.string().optional(),
@@ -138,13 +138,16 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       const [startHour, startMinute] = data.startTime.split(":").map(Number);
       const [endHour, endMinute] = data.endTime.split(":").map(Number);
       
+      // 將日期轉換為格式化的字符串
       const scheduleDate = new Date(data.scheduledDate);
+      // 設置時間
       const scheduleTime = new Date(scheduleDate);
       scheduleTime.setHours(startHour, startMinute, 0);
       
       const endTime = new Date(scheduleDate);
       endTime.setHours(endHour, endMinute, 0);
       
+      // 格式化時間為ISO字符串以符合後端期望的格式
       const messageData = {
         title: data.title,
         content: data.content,

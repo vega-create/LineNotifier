@@ -144,8 +144,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   router.post("/messages", async (req: Request, res: Response) => {
     try {
-      // 直接使用body數據，因為我們已經修改了insertMessageSchema來接受字符串日期
-      const messageData = insertMessageSchema.parse(req.body);
+      // 直接使用body數據，因為我們已經修改了schema來接受字符串日期
+      const messageData = req.body;
       const message = await storage.createMessage(messageData);
 
       // In a real implementation, this would send the message to LINE
@@ -161,8 +161,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
-      // 直接使用body數據，因為我們已經修改了insertMessageSchema來接受字符串日期
-      const messageData = insertMessageSchema.partial().parse(req.body);
+      // 直接使用body數據，因為我們已經修改了schema來接受字符串日期
+      const messageData = req.body;
       const updatedMessage = await storage.updateMessage(id, messageData);
       
       if (!updatedMessage) {
