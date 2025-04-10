@@ -16,6 +16,57 @@ import fetch from "node-fetch";
 export async function registerRoutes(app: Express): Promise<Server> {
   const router = express.Router();
   
+  // 處理LINE訊息的函數
+  const handleLineMessage = async (event: any, channelAccessToken: string) => {
+    // 只處理文字訊息
+    if (event.type === 'message' && event.message.type === 'text') {
+      const messageText = event.message.text.trim().toLowerCase();
+      
+      // 檢查是否為查詢群組ID的命令
+      if (messageText === '查群組id' || messageText === '查群組ID' || messageText === '查詢群組id' || messageText === '查詢群組ID') {
+        const groupId = event.source.groupId || event.source.roomId;
+        
+        if (!groupId) {
+          console.error("無法取得群組ID");
+          return;
+        }
+        
+        // 準備回覆訊息
+        const replyMessage = `【群組ID資訊】\n此群組的ID為：\n${groupId}\n\n您可以複製此ID並在系統中使用。`;
+        const replyToken = event.replyToken;
+        
+        try {
+          // 使用LINE API回覆訊息
+          const response = await fetch('https://api.line.me/v2/bot/message/reply', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${channelAccessToken}`
+            },
+            body: JSON.stringify({
+              replyToken: replyToken,
+              messages: [
+                {
+                  type: 'text',
+                  text: replyMessage
+                }
+              ]
+            })
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`回覆LINE訊息失敗: ${response.status} ${errorText}`);
+          } else {
+            console.log(`成功回覆群組ID查詢 (${groupId})`);
+          }
+        } catch (error) {
+          console.error("回覆LINE訊息時發生錯誤:", error);
+        }
+      }
+    }
+  };
+  
   // 新增訊息檢查計時器 - 每分鐘檢查一次，查找需要發送的訊息
   let messageCheckInterval: NodeJS.Timeout | null = null;
 
@@ -1065,7 +1116,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 新增測試端點，用於確認webhook設置是否正確
+  // 添加LINE Webhook相關路由（放在API路由設置之前）
+  // 測試端點 - 用於確認webhook設置是否正確
   app.get("/webhook", (req: Request, res: Response) => {
     console.log("GET /webhook - 收到測試請求");
     res.status(200).send("LINE Webhook is working!");
@@ -1077,8 +1129,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).send("LINE Callback is working!");
   });
   
-  // 使用相同的處理邏輯，但支援多個webhook入口
-  const handleLineWebhook = async (req: Request, res: Response) => {
+  // LINE Webhook處理 - 用於接收來自LINE的事件
+  app.post("/webhook", async (req: Request, res: Response) => {
     try {
       // 取得LINE頻道密鑰
       const channelSecret = process.env.LINE_CHANNEL_SECRET || "";
@@ -1090,11 +1142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // 輸出調試信息
-      console.log("收到POST webhook請求:", {
-        path: req.path,
-        headers: req.headers,
-        body: req.body
-      });
+      console.log("POST /webhook - 收到LINE webhook請求");
       
       // 驗證請求是否來自LINE
       const signature = req.headers["x-line-signature"] as string;
@@ -1123,57 +1171,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const events = req.body.events || [];
       console.log("接收到LINE Webhook事件:", JSON.stringify(events));
       
+      // 處理每個事件
       for (const event of events) {
-        // 只處理文字訊息
-        if (event.type === 'message' && event.message.type === 'text') {
-          const messageText = event.message.text.trim().toLowerCase();
-          
-          // 檢查是否為查詢群組ID的命令
-          if (messageText === '查群組id' || messageText === '查群組ID' || messageText === '查詢群組id' || messageText === '查詢群組ID') {
-            // 取得群組ID
-            const groupId = event.source.groupId || event.source.roomId;
-            
-            if (!groupId) {
-              console.error("無法取得群組ID");
-              continue;
-            }
-            
-            // 準備回覆訊息
-            const replyMessage = `【群組ID資訊】\n此群組的ID為：\n${groupId}\n\n您可以複製此ID並在系統中使用。`;
-            
-            // 建立回覆
-            const replyToken = event.replyToken;
-            
-            // 回覆訊息
-            try {
-              const response = await fetch('https://api.line.me/v2/bot/message/reply', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${channelAccessToken}`
-                },
-                body: JSON.stringify({
-                  replyToken: replyToken,
-                  messages: [
-                    {
-                      type: 'text',
-                      text: replyMessage
-                    }
-                  ]
-                })
-              });
-              
-              if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`回覆LINE訊息失敗: ${response.status} ${errorText}`);
-              } else {
-                console.log(`成功回覆群組ID查詢 (${groupId})`);
-              }
-            } catch (error) {
-              console.error("回覆LINE訊息時發生錯誤:", error);
-            }
-          }
-        }
+        await handleLineMessage(event, channelAccessToken);
       }
       
       // 按照LINE的規範，即使沒有處理任何事件也要回覆200
@@ -1182,14 +1182,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("處理LINE Webhook時發生錯誤:", error);
       res.status(500).send("Internal Server Error");
     }
-  };
+  });
   
-  // LINE Webhook處理 - 支援多個不同路徑
-  app.post("/webhook", handleLineWebhook);
-  app.post("/callback", handleLineWebhook);
-  app.post("/api/webhook", handleLineWebhook);
-  app.post("/api/callback", handleLineWebhook);
+  // 為了兼容性添加callback路徑
+  app.post("/callback", async (req: Request, res: Response) => {
+    console.log("POST /callback - 收到webhook請求");
+    // 使用相同的處理邏輯，而不是轉發
+    try {
+      // 取得LINE頻道密鑰
+      const channelSecret = process.env.LINE_CHANNEL_SECRET || "";
+      const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
+      
+      if (!channelSecret || !channelAccessToken) {
+        console.error("Missing LINE API credentials");
+        return res.status(400).send("Missing LINE API credentials");
+      }
+      
+      // 驗證請求是否來自LINE
+      const signature = req.headers["x-line-signature"] as string;
+      if (!signature) {
+        console.error("Missing LINE signature");
+        return res.status(401).send("Missing signature");
+      }
 
+      // 將請求體轉為字符串以進行簽名驗證
+      const body = JSON.stringify(req.body);
+      
+      // 創建HMAC簽名
+      const crypto = require('crypto');
+      const expectedSignature = crypto
+        .createHmac('SHA256', channelSecret)
+        .update(body)
+        .digest('base64');
+      
+      // 驗證簽名
+      if (signature !== expectedSignature) {
+        console.error("Invalid LINE signature");
+        return res.status(401).send("Invalid signature");
+      }
+
+      // 解析LINE事件
+      const events = req.body.events || [];
+      console.log("接收到LINE Webhook事件:", JSON.stringify(events));
+      
+      // 處理每個事件
+      for (const event of events) {
+        await handleLineMessage(event, channelAccessToken);
+      }
+      
+      // 按照LINE的規範，即使沒有處理任何事件也要回覆200
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("處理LINE Webhook時發生錯誤:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  // 支援/api/webhook和/api/callback路徑（與先前實現兼容）
+  router.post("/webhook", async (req: Request, res: Response) => {
+    console.log("POST /api/webhook - 轉發到webhook處理");
+    // 轉發到webhook處理邏輯
+    return app._router.handle(
+      { ...req, url: "/webhook", path: "/webhook", originalUrl: "/webhook" }, 
+      res, 
+      () => {}
+    );
+  });
+  
+  router.post("/callback", async (req: Request, res: Response) => {
+    console.log("POST /api/callback - 轉發到webhook處理");
+    // 轉發到webhook處理邏輯
+    return app._router.handle(
+      { ...req, url: "/webhook", path: "/webhook", originalUrl: "/webhook" }, 
+      res, 
+      () => {}
+    );
+  });
+  
+  // 最後設置API路由
   app.use("/api", router);
 
   const httpServer = createServer(app);
