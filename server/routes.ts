@@ -1119,8 +1119,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 添加LINE Webhook相關路由（放在API路由設置之前）
   // 測試端點 - 用於確認webhook設置是否正確
   app.get("/webhook", (req: Request, res: Response) => {
-    console.log("GET /webhook - 收到測試請求");
-    res.status(200).send("LINE Webhook is working!");
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] GET /webhook - 收到測試請求, headers: ${JSON.stringify(req.headers)}`);
+    
+    // 添加一個簡單但完整的HTML響應，方便用戶測試
+    res.setHeader('Content-Type', 'text/html');
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>LINE Webhook Test</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+            h1 { color: #b6295f; }
+            .success { color: green; font-weight: bold; }
+            pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+          </style>
+        </head>
+        <body>
+          <h1>LINE Webhook測試頁面</h1>
+          <p class="success">✓ Webhook服務正常運作中!</p>
+          <p>已成功收到測試請求，時間戳: ${timestamp}</p>
+          <p>如果您在LINE群組中發送「查群組ID」但沒收到回應，可能的問題:</p>
+          <ol>
+            <li>LINE開發者平台上的Webhook URL可能不正確</li>
+            <li>"Use webhook"選項可能未啟用</li>
+            <li>機器人可能沒有存取群組訊息的權限</li>
+            <li>機器人可能未加入您嘗試測試的群組</li>
+            <li>簽名驗證可能失敗，Channel Secret可能不正確</li>
+          </ol>
+          <p>請確認您在LINE開發者平台上配置的Webhook URL為: <pre>https://line-notifier-vegalin1029.replit.app/webhook</pre></p>
+        </body>
+      </html>
+    `);
   });
   
   // 為了兼容性而添加的額外webhook回調路徑
