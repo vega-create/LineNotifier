@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { FiMessageSquare, FiCalendar, FiClock, FiUsers, FiFileText, FiSettings, FiMenu, FiSend } from "react-icons/fi";
+import { FiMessageSquare, FiCalendar, FiClock, FiUsers, FiFileText, FiSettings, FiMenu, FiSend, FiSearch } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { Settings } from "@shared/schema";
@@ -38,6 +38,11 @@ export default function Sidebar({ currentPath }: SidebarProps) {
       name: "群組管理",
       path: "/groups",
       icon: <FiUsers className="h-5 w-5" />,
+    },
+    {
+      name: "查詢群組ID",
+      path: "/group-search",
+      icon: <FiSearch className="h-5 w-5" />,
     },
     {
       name: "訊息模板",

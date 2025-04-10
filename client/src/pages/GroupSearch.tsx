@@ -49,7 +49,10 @@ export default function GroupSearch() {
     queryFn: async () => {
       if (!searchTerm) return { found: false, message: '', groups: [] };
       
-      const res = await apiRequest(`/api/groups/search?query=${encodeURIComponent(searchTerm)}`);
+      const res = await apiRequest<SearchResult>(
+        'GET',
+        `/api/groups/search?query=${encodeURIComponent(searchTerm)}`
+      );
       return res;
     },
     enabled: !!searchTerm, // 只有當searchTerm存在時才執行查詢
