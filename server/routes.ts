@@ -1065,6 +1065,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // LINE Webhook處理 - 用於接收來自LINE的事件
+  router.post("/webhook", async (req: Request, res: Response) => {
+    try {
+      // 取得LINE頻道密鑰
+      const channelSecret = process.env.LINE_CHANNEL_SECRET || "";
+      const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
+      
+      if (!channelSecret || !channelAccessToken) {
+        console.error("Missing LINE API credentials");
+        return res.status(400).send("Missing LINE API credentials");
+      }
+      
+      // 驗證請求是否來自LINE
+      const signature = req.headers["x-line-signature"] as string;
+      if (!signature) {
+        console.error("Missing LINE signature");
+        return res.status(401).send("Missing signature");
+      }
+
+      // 將請求體轉為字符串以進行簽名驗證
+      const body = JSON.stringify(req.body);
+      
+      // 創建HMAC簽名
+      const crypto = require('crypto');
+      const expectedSignature = crypto
+        .createHmac('SHA256', channelSecret)
+        .update(body)
+        .digest('base64');
+      
+      // 驗證簽名
+      if (signature !== expectedSignature) {
+        console.error("Invalid LINE signature");
+        return res.status(401).send("Invalid signature");
+      }
+
+      // 解析LINE事件
+      const events = req.body.events || [];
+      console.log("接收到LINE Webhook事件:", JSON.stringify(events));
+      
+      for (const event of events) {
+        // 只處理文字訊息
+        if (event.type === 'message' && event.message.type === 'text') {
+          const messageText = event.message.text.trim().toLowerCase();
+          
+          // 檢查是否為查詢群組ID的命令
+          if (messageText === '查群組id' || messageText === '查群組ID' || messageText === '查詢群組id' || messageText === '查詢群組ID') {
+            // 取得群組ID
+            const groupId = event.source.groupId || event.source.roomId;
+            
+            if (!groupId) {
+              console.error("無法取得群組ID");
+              continue;
+            }
+            
+            // 準備回覆訊息
+            const replyMessage = `【群組ID資訊】\n此群組的ID為：\n${groupId}\n\n您可以複製此ID並在系統中使用。`;
+            
+            // 建立回覆
+            const replyToken = event.replyToken;
+            
+            // 回覆訊息
+            try {
+              const response = await fetch('https://api.line.me/v2/bot/message/reply', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${channelAccessToken}`
+                },
+                body: JSON.stringify({
+                  replyToken: replyToken,
+                  messages: [
+                    {
+                      type: 'text',
+                      text: replyMessage
+                    }
+                  ]
+                })
+              });
+              
+              if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`回覆LINE訊息失敗: ${response.status} ${errorText}`);
+              } else {
+                console.log(`成功回覆群組ID查詢 (${groupId})`);
+              }
+            } catch (error) {
+              console.error("回覆LINE訊息時發生錯誤:", error);
+            }
+          }
+        }
+      }
+      
+      // 按照LINE的規範，即使沒有處理任何事件也要回覆200
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("處理LINE Webhook時發生錯誤:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
   app.use("/api", router);
 
   const httpServer = createServer(app);

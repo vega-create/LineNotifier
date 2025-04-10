@@ -72,6 +72,23 @@ export default function Home() {
 
   return (
     <div className="space-y-6">
+      <Card className="mb-4 bg-blue-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex flex-col space-y-2">
+            <h3 className="text-lg font-medium text-blue-800">群組ID查詢功能</h3>
+            <p className="text-sm text-blue-700">
+              現在您可以直接在LINE群組中查詢群組ID！只需在任何LINE群組中輸入以下命令：
+            </p>
+            <div className="bg-white p-3 rounded border border-blue-200 font-mono text-sm">
+              查群組ID
+            </div>
+            <p className="text-sm text-blue-700">
+              機器人將直接回覆該群組的ID，您可以複製並在此系統中使用。
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+      
       <MessageForm 
         groups={groups} 
         templates={templates}
