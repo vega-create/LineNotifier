@@ -1065,8 +1065,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // LINE Webhook處理 - 用於接收來自LINE的事件
-  router.post("/webhook", async (req: Request, res: Response) => {
+  // 新增測試端點，用於確認webhook設置是否正確
+  app.get("/webhook", (req: Request, res: Response) => {
+    console.log("GET /webhook - 收到測試請求");
+    res.status(200).send("LINE Webhook is working!");
+  });
+  
+  // LINE Webhook處理 - 用於接收來自LINE的事件 (直接暴露在根路徑下，不在/api路由下)
+  app.post("/webhook", async (req: Request, res: Response) => {
     try {
       // 取得LINE頻道密鑰
       const channelSecret = process.env.LINE_CHANNEL_SECRET || "";
