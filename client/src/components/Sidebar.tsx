@@ -40,11 +40,6 @@ export default function Sidebar({ currentPath }: SidebarProps) {
       icon: <FiUsers className="h-5 w-5" />,
     },
     {
-      name: "查詢群組ID",
-      path: "/group-search",
-      icon: <FiSearch className="h-5 w-5" />,
-    },
-    {
       name: "訊息模板",
       path: "/templates",
       icon: <FiFileText className="h-5 w-5" />,

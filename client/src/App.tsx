@@ -8,7 +8,6 @@ import Home from "./pages/Home";
 import ScheduleManagement from "./pages/ScheduleManagement";
 import MessageHistory from "./pages/MessageHistory";
 import GroupManagement from "./pages/GroupManagement";
-import GroupSearch from "./pages/GroupSearch";
 import TemplateManagement from "./pages/TemplateManagement";
 import Settings from "./pages/Settings";
 import TestSend from "./pages/TestSend";
@@ -25,7 +24,6 @@ function Router() {
           <Route path="/schedules" component={ScheduleManagement} />
           <Route path="/history" component={MessageHistory} />
           <Route path="/groups" component={GroupManagement} />
-          <Route path="/group-search" component={GroupSearch} />
           <Route path="/templates" component={TemplateManagement} />
           <Route path="/settings" component={Settings} />
           <Route path="/test-send" component={TestSend} />
