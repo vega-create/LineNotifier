@@ -39,6 +39,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch groups" });
     }
   });
+  
+  // 查詢群組ID - 支持模糊搜索
+  router.get("/groups/search", async (req: Request, res: Response) => {
+    try {
+      const { query } = req.query;
+      if (!query) {
+        return res.status(400).json({ error: "查詢關鍵字是必須的" });
+      }
+      
+      const searchQuery = String(query).toLowerCase();
+      const groups = await storage.getGroups();
+      
+      // 根據名稱或ID模糊匹配
+      const matchedGroups = groups.filter(group => 
+        group.name.toLowerCase().includes(searchQuery) || 
+        group.lineId.toLowerCase().includes(searchQuery)
+      );
+      
+      if (matchedGroups.length === 0) {
+        return res.json({ 
+          found: false, 
+          message: `沒有找到包含 "${query}" 的群組`,
+          groups: []
+        });
+      }
+      
+      res.json({ 
+        found: true, 
+        message: `找到 ${matchedGroups.length} 個匹配的群組`,
+        groups: matchedGroups
+      });
+    } catch (error) {
+      console.error("搜索群組時發生錯誤:", error);
+      res.status(500).json({ error: "搜索群組失敗", details: String(error) });
+    }
+  });
 
   router.post("/groups", async (req: Request, res: Response) => {
     try {
