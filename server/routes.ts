@@ -1271,13 +1271,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // 支援/api/webhook和/api/callback路徑（與先前實現兼容）
   router.post("/webhook", async (req: Request, res: Response) => {
-    console.log("POST /api/webhook - 轉發到webhook處理");
-    // 轉發到webhook處理邏輯
-    return app._router.handle(
-      { ...req, url: "/webhook", path: "/webhook", originalUrl: "/webhook" }, 
-      res, 
-      () => {}
-    );
+    console.log("POST /api/webhook - 收到webhook請求");
+    try {
+      // 處理來自Cloudflare Worker的請求
+      const { events, isCloudflareWorker } = req.body;
+      
+      if (isCloudflareWorker) {
+        console.log("收到來自Cloudflare Worker的請求:", JSON.stringify(req.body));
+        
+        // 處理來自Cloudflare Worker的事件
+        if (events && Array.isArray(events)) {
+          const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
+          if (!channelAccessToken) {
+            console.error("Missing LINE_CHANNEL_ACCESS_TOKEN");
+            return res.status(400).json({ success: false, error: "Missing LINE API credentials" });
+          }
+          
+          for (const event of events) {
+            await handleLineMessage(event, channelAccessToken);
+          }
+          
+          return res.status(200).json({ success: true });
+        }
+      }
+      
+      // 如果不是來自Cloudflare Worker的請求，按照常規webhook處理
+      return app._router.handle(
+        { ...req, url: "/webhook", path: "/webhook", originalUrl: "/webhook" }, 
+        res, 
+        () => {}
+      );
+    } catch (error) {
+      console.error("處理/api/webhook時發生錯誤:", error);
+      res.status(500).json({ success: false, error: "Internal server error" });
+    }
+  });
+  
+  // 新增轉發群組ID的API端點
+  router.post("/line-group-id", async (req: Request, res: Response) => {
+    try {
+      console.log("POST /api/line-group-id - 收到轉發群組ID請求:", JSON.stringify(req.body));
+      
+      const { groupId, messageText, replyToken } = req.body;
+      
+      if (!groupId || !replyToken) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Missing required parameters" 
+        });
+      }
+      
+      // 取得LINE API設定
+      const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
+      if (!channelAccessToken) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Missing LINE API token" 
+        });
+      }
+      
+      // 生成回覆訊息
+      const replyMessage = `【群組ID資訊】\n此群組的ID為：\n${groupId}\n\n您可以複製此ID並在系統中使用。`;
+      
+      // 回覆LINE訊息
+      try {
+        console.log(`準備回覆LINE訊息，群組ID: ${groupId}, replyToken: ${replyToken}`);
+        
+        const response = await fetch('https://api.line.me/v2/bot/message/reply', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${channelAccessToken}`
+          },
+          body: JSON.stringify({
+            replyToken: replyToken,
+            messages: [
+              {
+                type: 'text',
+                text: replyMessage
+              }
+            ]
+          })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`回覆LINE訊息失敗: ${response.status} ${errorText}`);
+          return res.status(500).json({ 
+            success: false, 
+            error: `LINE API error: ${response.status} ${errorText}` 
+          });
+        }
+        
+        console.log(`成功回覆群組ID查詢 (${groupId})`);
+        return res.status(200).json({ success: true });
+      } catch (error) {
+        console.error("回覆LINE訊息時發生錯誤:", error);
+        return res.status(500).json({ 
+          success: false, 
+          error: String(error) 
+        });
+      }
+    } catch (error) {
+      console.error("處理/api/line-group-id時發生錯誤:", error);
+      return res.status(500).json({ 
+        success: false, 
+        error: "Internal server error" 
+      });
+    }
   });
   
   router.post("/callback", async (req: Request, res: Response) => {
