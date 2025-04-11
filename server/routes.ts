@@ -673,7 +673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("檢查週期性訊息時發生錯誤:", error);
     }
-  }, 5 * 60 * 1000); // 5分鐘檢查一次
+  }, 1 * 60 * 1000); // 1分鐘檢查一次
   
   // 輔助函數：格式化台灣時間（GMT+8）
   function formatTaiwanTime(date: Date): string {
