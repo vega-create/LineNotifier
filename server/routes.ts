@@ -16,56 +16,7 @@ import fetch from "node-fetch";
 export async function registerRoutes(app: Express): Promise<Server> {
   const router = express.Router();
   
-  // 處理LINE訊息的函數
-  const handleLineMessage = async (event: any, channelAccessToken: string) => {
-    // 只處理文字訊息
-    if (event.type === 'message' && event.message.type === 'text') {
-      const messageText = event.message.text.trim().toLowerCase();
-      
-      // 檢查是否為查詢群組ID的命令
-      if (messageText === '查群組id' || messageText === '查群組ID' || messageText === '查詢群組id' || messageText === '查詢群組ID') {
-        const groupId = event.source.groupId || event.source.roomId;
-        
-        if (!groupId) {
-          console.error("無法取得群組ID");
-          return;
-        }
-        
-        // 準備回覆訊息
-        const replyMessage = `【群組ID資訊】\n此群組的ID為：\n${groupId}\n\n您可以複製此ID並在系統中使用。`;
-        const replyToken = event.replyToken;
-        
-        try {
-          // 使用LINE API回覆訊息
-          const response = await fetch('https://api.line.me/v2/bot/message/reply', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${channelAccessToken}`
-            },
-            body: JSON.stringify({
-              replyToken: replyToken,
-              messages: [
-                {
-                  type: 'text',
-                  text: replyMessage
-                }
-              ]
-            })
-          });
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`回覆LINE訊息失敗: ${response.status} ${errorText}`);
-          } else {
-            console.log(`成功回覆群組ID查詢 (${groupId})`);
-          }
-        } catch (error) {
-          console.error("回覆LINE訊息時發生錯誤:", error);
-        }
-      }
-    }
-  };
+  // LINE相關功能已移除 - 使用者使用另一個機器人處理群組ID查詢
   
   // 新增訊息檢查計時器 - 每分鐘檢查一次，查找需要發送的訊息
   let messageCheckInterval: NodeJS.Timeout | null = null;
@@ -1118,41 +1069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // 添加LINE Webhook相關路由（放在API路由設置之前）
   // 測試端點 - 用於確認webhook設置是否正確
-  app.get("/webhook", (req: Request, res: Response) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] GET /webhook - 收到測試請求, headers: ${JSON.stringify(req.headers)}`);
-    
-    // 添加一個簡單但完整的HTML響應，方便用戶測試
-    res.setHeader('Content-Type', 'text/html');
-    res.status(200).send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>LINE Webhook Test</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-            h1 { color: #b6295f; }
-            .success { color: green; font-weight: bold; }
-            pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
-          </style>
-        </head>
-        <body>
-          <h1>LINE Webhook測試頁面</h1>
-          <p class="success">✓ Webhook服務正常運作中!</p>
-          <p>已成功收到測試請求，時間戳: ${timestamp}</p>
-          <p>如果您在LINE群組中發送「查群組ID」但沒收到回應，可能的問題:</p>
-          <ol>
-            <li>LINE開發者平台上的Webhook URL可能不正確</li>
-            <li>"Use webhook"選項可能未啟用</li>
-            <li>機器人可能沒有存取群組訊息的權限</li>
-            <li>機器人可能未加入您嘗試測試的群組</li>
-            <li>簽名驗證可能失敗，Channel Secret可能不正確</li>
-          </ol>
-          <p>請確認您在LINE開發者平台上配置的Webhook URL為: <pre>https://line-notifier-vegalin1029.replit.app/webhook</pre></p>
-        </body>
-      </html>
-    `);
-  });
+  // 已移除LINE webhook測試端點
   
   // 為了兼容性而添加的額外webhook回調路徑
   app.get("/callback", (req: Request, res: Response) => {
