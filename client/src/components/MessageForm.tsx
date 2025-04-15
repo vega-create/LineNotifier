@@ -238,8 +238,8 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       
       // 顯示成功訊息
       toast({
-        title: "訊息已成功排程",
-        description: `訊息已成功安排在 ${format(form.getValues("scheduledDate"), "yyyy/MM/dd")} ${form.getValues("startTime")} 發送。系統將在指定的時間自動發送訊息。`,
+        title: "訊息排程成功",
+        description: `訊息將在 ${format(form.getValues("scheduledDate"), "yyyy/MM/dd")} ${form.getValues("startTime")} 準確推播。系統會在您指定的時間自動發送訊息。`,
       });
     } catch (error) {
       console.error("Error sending message:", error);

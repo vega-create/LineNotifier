@@ -94,8 +94,8 @@ export default function Home() {
         templates={templates}
         onSuccess={() => {
           toast({
-            title: "訊息已排程",
-            description: "您的訊息已成功排程，將於指定時間發送。",
+            title: "訊息排程成功",
+            description: "您的訊息將在指定的時間準確推播。",
           });
         }}
       />
