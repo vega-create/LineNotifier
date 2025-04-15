@@ -241,110 +241,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 輸出設定時間的詳細信息
         console.log(`=========== 排程訊息詳細計劃 ===========`);
         console.log(`訊息ID: ${message.id}, 標題: ${message.title}`);
-        console.log(`將延遲 ${Math.round(timeToScheduled / 1000)} 秒 (${timeToScheduled} 毫秒) 後發送`);
-        console.log(`當前服務器時間: ${new Date().toISOString()}`);
-        console.log(`預計發送時間: ${scheduledSendTime.toDate().toISOString()}`);
+        console.log(`排程時間: ${scheduledTimeTW.format("YYYY/MM/DD HH:mm:ss")} 台灣時間`);
+        console.log(`訊息類型: ${message.type === "periodic" ? "週期性訊息" : "單次訊息"}`);
+        if (message.type === "periodic" && message.recurringType) {
+          console.log(`週期類型: ${message.recurringType}`);
+        }
+        console.log(`訊息將由排程檢查機制在指定時間發送`);
         console.log(`==========================================`);
-        
-        // 設定發送任務 - 注意：Node.js的setTimeout最大延遲約為24.8天，對於長時間排程可能需要其他方案
-        setTimeout(async () => {
-          try {
-            // 檢查訊息是否仍然存在
-            const messageToSend = await storage.getMessage(message.id);
-            if (!messageToSend) {
-              console.log(`訊息 ID: ${message.id} 已不存在，跳過自動發送`);
-              return;
-            }
             
-            console.log(`開始發送排程訊息 (ID: ${message.id})`);
-            
-            // 獲取LINE API設定
-            const settings = await storage.getSettings();
-            if (!settings || !settings.lineApiToken) {
-              console.error("無法獲取LINE API設定，跳過發送");
-              return;
-            }
-            
-            // 獲取群組資訊
-            const groups = await Promise.all(
-              messageToSend.groupIds.map(async groupId => {
-                return await storage.getGroup(parseInt(groupId));
-              })
-            );
-            
-            const validGroups = groups.filter(g => g !== undefined) as Group[];
-            
-            if (validGroups.length === 0) {
-              console.error("找不到有效的群組，跳過發送");
-              return;
-            }
-            
-            // 格式化訊息內容
-            let finalContent = messageToSend.content;
-            
-            // 添加幣別和金額
-            if (messageToSend.currency && messageToSend.amount) {
-              let currencySymbol = "";
-              if (messageToSend.currency === "TWD") currencySymbol = "NT$";
-              else if (messageToSend.currency === "USD") currencySymbol = "US$";
-              else if (messageToSend.currency === "AUD") currencySymbol = "AU$";
-              
-              if (!finalContent.includes(`${currencySymbol}${messageToSend.amount}`)) {
-                finalContent += `\n\n金額: ${currencySymbol}${messageToSend.amount}`;
-              }
-            }
-            
-            // 進行分段處理
-            finalContent = finalContent.replace(/。(?!\n)/g, "。\n");
-            
-            // 發送訊息到所有群組
-            let allSuccess = true;
-            for (const group of validGroups) {
-              try {
-                console.log(`嘗試發送訊息到群組: ${group.name} (ID: ${group.lineId})`);
-                
-                // 使用實際的LINE API發送訊息
-                await sendLineMessage(
-                  group.lineId,
-                  finalContent,
-                  settings.lineApiToken || ""
-                );
-                
-                console.log(`發送成功到群組: ${group.name}`);
-              } catch (error) {
-                console.error(`發送到群組 ${group.name} 失敗:`, error);
-                allSuccess = false;
-              }
-            }
-            
-            // 更新訊息狀態
-            const newStatus = allSuccess ? "sent" : "partial";
-            await storage.updateMessage(message.id, { status: newStatus });
-            
-            // 處理訊息發送後的邏輯 - 支持週期性發送
-            if (allSuccess) {
-              if (messageToSend.type === "periodic" && messageToSend.recurringActive) {
-                // 週期性訊息：更新最後發送時間，並將狀態重設為排程中
-                // 使用moment-timezone設置台灣時間
-                const nowTaiwan = moment().tz("Asia/Taipei");
-                await storage.updateMessage(message.id, { 
-                  lastSent: nowTaiwan.toDate().toISOString(),
-                  status: "scheduled" // 重置狀態，等待下次發送
-                });
-                console.log(`週期性訊息 ID: ${message.id} 已更新最後發送時間並保留排程`);
-              } else {
-                // 單次訊息：發送成功後刪除
-                console.log(`訊息 ID: ${message.id} 已成功發送，現在將其刪除`);
-                await storage.deleteMessage(message.id);
-              }
-            }
-            
-            console.log(`排程訊息處理完成 (ID: ${message.id})`);
-          } catch (error) {
-            console.error(`發送排程訊息時發生錯誤 (ID: ${message.id}):`, error);
-          }
-        }, timeToScheduled);
-        
         // 回應客戶端
         res.status(201).json(message);
         
@@ -458,16 +362,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 檢查並發送週期性訊息
+  // 檢查並發送所有類型的排程訊息（包括單次和週期性）
   // 設置定時任務，每分鐘檢查一次
   setInterval(async () => {
     try {
-      console.log("檢查週期性訊息排程...");
+      console.log("檢查排程訊息...");
       const messages = await storage.getMessages();
       
+      // 篩選所有排程狀態的訊息
+      const pendingMessages = messages.filter(m => m.status === "scheduled");
+      
+      if (pendingMessages.length === 0) {
+        console.log("沒有找到待發送的排程訊息");
+        return;
+      }
+      
+      console.log(`找到 ${pendingMessages.length} 個待處理的排程訊息`);
+      
+      // 使用moment-timezone獲取台灣當前時間
+      const nowTW = moment().tz("Asia/Taipei");
+      
+      // 檢查是否有單次訊息需要發送（非週期性訊息）
+      const singleMessages = pendingMessages.filter(m => 
+        m.type !== "periodic" || !m.recurringActive);
+      
+      // 處理單次訊息
+      for (const message of singleMessages) {
+        try {
+          // 檢查此訊息是否應該發送了
+          const scheduledTime = moment(message.scheduledTime).tz("Asia/Taipei");
+          
+          console.log(`檢查單次訊息 ID: ${message.id}, 標題: ${message.title}`);
+          console.log(`排程時間: ${scheduledTime.format("YYYY/MM/DD HH:mm:ss")}`);
+          console.log(`當前時間: ${nowTW.format("YYYY/MM/DD HH:mm:ss")}`);
+          
+          // 如果當前時間已經超過或等於排程時間，則發送訊息
+          if (nowTW.isSameOrAfter(scheduledTime)) {
+            console.log(`單次訊息 ${message.id} 已到發送時間，準備發送...`);
+            
+            // 以下是發送訊息的處理邏輯
+            // 獲取群組資訊
+            const groups = await Promise.all(
+              message.groupIds.map(async groupId => {
+                return await storage.getGroup(parseInt(groupId));
+              })
+            );
+            
+            const validGroups = groups.filter(g => g !== undefined) as Group[];
+            
+            if (validGroups.length === 0) {
+              console.error(`訊息 ${message.id} 找不到有效的群組，跳過發送`);
+              // 將訊息標記為失敗
+              await storage.updateMessage(message.id, { status: "failed" });
+              continue;
+            }
+            
+            // 獲取LINE API設定
+            const settings = await storage.getSettings();
+            if (!settings || (!settings.lineApiToken && !process.env.LINE_CHANNEL_ACCESS_TOKEN)) {
+              console.error("LINE API Token未配置，跳過發送");
+              continue;
+            }
+            
+            // 格式化訊息內容
+            let finalContent = message.content;
+            
+            // 添加幣別和金額
+            if (message.currency && message.amount) {
+              let currencySymbol = "";
+              if (message.currency === "TWD") currencySymbol = "NT$";
+              else if (message.currency === "USD") currencySymbol = "US$";
+              else if (message.currency === "AUD") currencySymbol = "AU$";
+              
+              if (!finalContent.includes(`${currencySymbol}${message.amount}`)) {
+                finalContent += `\n\n金額: ${currencySymbol}${message.amount}`;
+              }
+            }
+            
+            // 進行分段處理
+            finalContent = finalContent.replace(/。(?!\n)/g, "。\n");
+            
+            // 發送訊息到所有群組
+            let allSuccess = true;
+            for (const group of validGroups) {
+              try {
+                console.log(`嘗試發送訊息到群組: ${group.name} (ID: ${group.lineId})`);
+                
+                // 使用實際的LINE API發送訊息
+                await sendLineMessage(
+                  group.lineId,
+                  finalContent,
+                  settings.lineApiToken || ""
+                );
+                
+                console.log(`單次訊息發送成功到群組: ${group.name}`);
+              } catch (error) {
+                console.error(`單次訊息發送到群組 ${group.name} 失敗:`, error);
+                allSuccess = false;
+              }
+            }
+            
+            // 更新訊息狀態
+            const newStatus = allSuccess ? "sent" : "partial";
+            await storage.updateMessage(message.id, { 
+              status: newStatus,
+              lastSent: nowTW.toDate().toISOString()
+            });
+            
+            // 如果是單次訊息且發送成功，刪除該訊息
+            if (message.type !== "periodic" && allSuccess) {
+              console.log(`單次訊息 ${message.id} 發送成功，現在將其刪除`);
+              await storage.deleteMessage(message.id);
+            }
+          } else {
+            console.log(`單次訊息 ${message.id} 尚未到發送時間`);
+          }
+        } catch (error) {
+          console.error(`處理單次訊息 ${message.id} 時發生錯誤:`, error);
+        }
+      }
+      
       // 篩選出週期性且啟用的訊息
-      const recurringMessages = messages.filter(m => 
-        m.type === "periodic" && m.recurringActive && m.status === "scheduled");
+      const recurringMessages = pendingMessages.filter(m => 
+        m.type === "periodic" && m.recurringActive);
       
       if (recurringMessages.length === 0) {
         console.log("沒有找到啟用的週期性訊息");
@@ -476,8 +493,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`找到 ${recurringMessages.length} 個啟用的週期性訊息`);
       
-      // 使用moment-timezone獲取台灣當前時間
-      const nowTW = moment().tz("Asia/Taipei");
+      // 已經在上面宣告過nowTW，這裡重複使用
+      // 直接使用已宣告的nowTW變數
       
       for (const message of recurringMessages) {
         try {
