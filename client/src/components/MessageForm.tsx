@@ -239,7 +239,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       // 顯示成功訊息
       toast({
         title: "訊息已成功排程",
-        description: `訊息已成功安排在 ${format(form.getValues("scheduledDate"), "yyyy/MM/dd")} ${form.getValues("startTime")} 附近發送。注意：由於系統限制，實際發送時間可能在3分鐘內。`,
+        description: `訊息已成功安排在 ${format(form.getValues("scheduledDate"), "yyyy/MM/dd")} ${form.getValues("startTime")} 發送。系統將在指定的時間自動發送訊息。`,
       });
     } catch (error) {
       console.error("Error sending message:", error);
