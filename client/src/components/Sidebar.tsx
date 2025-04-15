@@ -86,22 +86,21 @@ export default function Sidebar({ currentPath }: SidebarProps) {
         <ul className="space-y-2">
           {navigationItems.map((item) => (
             <li key={item.path}>
-              <Link href={item.path}>
-                <a
-                  className={`flex items-center p-2 text-gray-700 rounded-md ${
-                    currentPath === item.path
-                      ? "bg-gray-100 font-medium"
-                      : "hover:bg-gray-100"
-                  }`}
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                  }}
-                >
-                  <span className={`mr-3 ${currentPath === item.path ? "text-primary" : "text-gray-500"}`}>
-                    {item.icon}
-                  </span>
-                  {item.name}
-                </a>
+              <Link 
+                href={item.path}
+                className={`flex items-center p-2 text-gray-700 rounded-md ${
+                  currentPath === item.path
+                    ? "bg-gray-100 font-medium"
+                    : "hover:bg-gray-100"
+                }`}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <span className={`mr-3 ${currentPath === item.path ? "text-primary" : "text-gray-500"}`}>
+                  {item.icon}
+                </span>
+                {item.name}
               </Link>
             </li>
           ))}
