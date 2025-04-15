@@ -95,7 +95,7 @@ export default function Home() {
         onSuccess={() => {
           toast({
             title: "訊息排程成功",
-            description: "您的訊息將在指定的時間準確推播。",
+            description: "您的訊息將在指定的時間準確推播，而非立即發送。",
           });
         }}
       />
