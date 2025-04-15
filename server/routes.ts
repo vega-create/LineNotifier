@@ -190,148 +190,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const messageData = req.body;
       console.log("POST /messages - Received data:", JSON.stringify(messageData));
       
-      // 手動驗證Zod schema
       try {
+        // 驗證數據
         const validated = insertMessageSchema.parse(messageData);
         console.log("Validation passed:", validated);
+        
+        // 創建消息
         const message = await storage.createMessage(validated);
         
-        // 檢查並準備排程發送訊息
+        // 處理排程發送邏輯
         const scheduledTime = new Date(message.scheduledTime || Date.now());
-        const endTime = new Date(message.endTime || Date.now());
         const now = new Date();
         
         console.log(`訊息已創建 ID: ${message.id}`);
         console.log(`排程時間: ${scheduledTime.toISOString()}`);
-        console.log(`結束時間: ${endTime.toISOString()}`);
         console.log(`當前時間: ${now.toISOString()}`);
         
         // 計算距離排程時間的毫秒數
-        const timeToScheduled = scheduledTime.getTime() - now.getTime();
+        let timeToScheduled = scheduledTime.getTime() - now.getTime();
         
-        // 如果排程時間已過或小於15分鐘內，立即發送
+        // 如果排程時間已過或小於15分鐘內，幾乎立即發送
         if (timeToScheduled <= 0 || timeToScheduled < 15 * 60 * 1000) {
           console.log(`排程時間已過或在15分鐘內，立即發送訊息 (ID: ${message.id})`);
-          // 發送訊息邏輯會在下面直接執行
-          
-          // TODO: 在此處添加立即發送的邏輯
-          // 由於此部分邏輯複雜，建議在修復排程功能後再實現
-        } else {
-          // 訊息將在排程時間發送
-          console.log(`訊息將在約${Math.round(timeToScheduled / 60000)}分鐘後（${formatTaiwanTime(scheduledTime)}）自動發送 (ID: ${message.id})`);
-          
-          // 設定定時任務在排程時間發送訊息
-          setTimeout(async () => {
-            try {
-              console.log(`排程時間已到，準備發送訊息 (ID: ${message.id})`);
-              
-              // 檢查訊息是否仍然存在
-              const messageToSend = await storage.getMessage(message.id);
-              if (!messageToSend) {
-                console.log(`訊息 ID: ${message.id} 已不存在，跳過自動發送`);
-                return;
-              }
-              
-              // 獲取LINE API設定
-              const settings = await storage.getSettings();
-              if (!settings || !settings.lineApiToken) {
-                console.error("無法獲取LINE API設定，跳過發送");
-                return;
-              }
-              
-              // 獲取群組資訊
-              const groups = await Promise.all(
-                messageToSend.groupIds.map(async groupId => {
-                  return await storage.getGroup(parseInt(groupId));
-                })
-              );
-              
-              const validGroups = groups.filter(g => g !== undefined) as Group[];
-              
-              if (validGroups.length === 0) {
-                console.error("找不到有效的群組，跳過發送");
-                return;
-              }
-              
-              // 格式化訊息內容
-              let finalContent = messageToSend.content;
-              
-              // 添加幣別和金額
-              if (messageToSend.currency && messageToSend.amount) {
-                let currencySymbol = "";
-                if (messageToSend.currency === "TWD") currencySymbol = "NT$";
-                else if (messageToSend.currency === "USD") currencySymbol = "US$";
-                else if (messageToSend.currency === "AUD") currencySymbol = "AU$";
-                
-                if (!finalContent.includes(`${currencySymbol}${messageToSend.amount}`)) {
-                  finalContent += `\n\n金額: ${currencySymbol}${messageToSend.amount}`;
-                }
-              }
-              
-              // 進行分段處理
-              finalContent = finalContent.replace(/。(?!\n)/g, "。\n");
-              
-              // 發送訊息到所有群組
-              let allSuccess = true;
-              for (const group of validGroups) {
-                try {
-                  console.log(`嘗試發送訊息到群組: ${group.name} (ID: ${group.lineId})`);
-                  console.log(`使用的訊息內容: ${finalContent}`);
-                  
-                  // 使用實際的LINE API發送訊息
-                  await sendLineMessage(
-                    group.lineId,
-                    finalContent,
-                    settings.lineApiToken || ""
-                  );
-                  
-                  console.log(`發送成功到群組: ${group.name}`);
-                } catch (error) {
-                  console.error(`發送到群組 ${group.name} 失敗:`, error);
-                  allSuccess = false;
-                }
-              }
-              
-              // 更新訊息狀態
-              const newStatus = allSuccess ? "sent" : "partial";
-              await storage.updateMessage(message.id, { status: newStatus });
-              
-              // 處理訊息發送後的邏輯 - 支持週期性發送
-              if (allSuccess) {
-                // 檢查是否為週期性訊息且已啟用周期性發送
-                if (messageToSend.type === "periodic" && messageToSend.recurringActive) {
-                  // 更新最後發送時間，並將狀態重設為排程中
-                  const now = new Date();
-                  await storage.updateMessage(message.id, { 
-                    lastSent: now.toISOString(),
-                    status: "scheduled" // 重置狀態，等待下次發送
-                  });
-                  console.log(`週期性訊息 ID: ${message.id} [${messageToSend.title}] 已更新最後發送時間並保留排程`);
-                } else {
-                  // 非週期性訊息或未啟用週期，則刪除
-                  console.log(`訊息 ID: ${message.id} 已成功發送，現在將其刪除`);
-                  const deleteResult = await storage.deleteMessage(message.id);
-                  console.log(`Message ${message.id} was successfully sent and deleted (result: ${deleteResult})`);
-                }
-              }
-              
-              console.log(`自動發送訊息完成 (ID: ${message.id}, 結果: ${allSuccess ? '成功' : '部分失敗'})`);
-            } catch (error) {
-              console.error(`自動發送訊息失敗 (ID: ${message.id}):`, error);
-            }
-          }, timeToScheduled); // 使用計算出來的時間差
+          timeToScheduled = 1000; // 使用1秒延遲讓伺服器有時間回應API請求
         }
+
+        // 輸出預計發送時間
+        console.log(`訊息將在約${Math.round(timeToScheduled / 60000)}分鐘後（${formatTaiwanTime(scheduledTime)}）自動發送 (ID: ${message.id})`);
         
+        // 設定發送任務
+        setTimeout(async () => {
+          try {
+            // 檢查訊息是否仍然存在
+            const messageToSend = await storage.getMessage(message.id);
+            if (!messageToSend) {
+              console.log(`訊息 ID: ${message.id} 已不存在，跳過自動發送`);
+              return;
+            }
+            
+            console.log(`開始發送排程訊息 (ID: ${message.id})`);
+            
+            // 獲取LINE API設定
+            const settings = await storage.getSettings();
+            if (!settings || !settings.lineApiToken) {
+              console.error("無法獲取LINE API設定，跳過發送");
+              return;
+            }
+            
+            // 獲取群組資訊
+            const groups = await Promise.all(
+              messageToSend.groupIds.map(async groupId => {
+                return await storage.getGroup(parseInt(groupId));
+              })
+            );
+            
+            const validGroups = groups.filter(g => g !== undefined) as Group[];
+            
+            if (validGroups.length === 0) {
+              console.error("找不到有效的群組，跳過發送");
+              return;
+            }
+            
+            // 格式化訊息內容
+            let finalContent = messageToSend.content;
+            
+            // 添加幣別和金額
+            if (messageToSend.currency && messageToSend.amount) {
+              let currencySymbol = "";
+              if (messageToSend.currency === "TWD") currencySymbol = "NT$";
+              else if (messageToSend.currency === "USD") currencySymbol = "US$";
+              else if (messageToSend.currency === "AUD") currencySymbol = "AU$";
+              
+              if (!finalContent.includes(`${currencySymbol}${messageToSend.amount}`)) {
+                finalContent += `\n\n金額: ${currencySymbol}${messageToSend.amount}`;
+              }
+            }
+            
+            // 進行分段處理
+            finalContent = finalContent.replace(/。(?!\n)/g, "。\n");
+            
+            // 發送訊息到所有群組
+            let allSuccess = true;
+            for (const group of validGroups) {
+              try {
+                console.log(`嘗試發送訊息到群組: ${group.name} (ID: ${group.lineId})`);
+                
+                // 使用實際的LINE API發送訊息
+                await sendLineMessage(
+                  group.lineId,
+                  finalContent,
+                  settings.lineApiToken || ""
+                );
+                
+                console.log(`發送成功到群組: ${group.name}`);
+              } catch (error) {
+                console.error(`發送到群組 ${group.name} 失敗:`, error);
+                allSuccess = false;
+              }
+            }
+            
+            // 更新訊息狀態
+            const newStatus = allSuccess ? "sent" : "partial";
+            await storage.updateMessage(message.id, { status: newStatus });
+            
+            // 處理訊息發送後的邏輯 - 支持週期性發送
+            if (allSuccess) {
+              if (messageToSend.type === "periodic" && messageToSend.recurringActive) {
+                // 週期性訊息：更新最後發送時間，並將狀態重設為排程中
+                const now = new Date();
+                await storage.updateMessage(message.id, { 
+                  lastSent: now.toISOString(),
+                  status: "scheduled" // 重置狀態，等待下次發送
+                });
+                console.log(`週期性訊息 ID: ${message.id} 已更新最後發送時間並保留排程`);
+              } else {
+                // 單次訊息：發送成功後刪除
+                console.log(`訊息 ID: ${message.id} 已成功發送，現在將其刪除`);
+                await storage.deleteMessage(message.id);
+              }
+            }
+            
+            console.log(`排程訊息處理完成 (ID: ${message.id})`);
+          } catch (error) {
+            console.error(`發送排程訊息時發生錯誤 (ID: ${message.id}):`, error);
+          }
+        }, timeToScheduled);
+        
+        // 回應客戶端
         res.status(201).json(message);
+        
       } catch (zodError) {
         console.error("Zod validation error:", zodError);
         return res.status(400).json({ 
-          error: `Validation error: ${zodError instanceof Error ? zodError.message : String(zodError)}`
+          error: `驗證錯誤: ${zodError instanceof Error ? zodError.message : String(zodError)}`
         });
       }
     } catch (err) {
       console.error("POST /messages - Error:", err);
-      console.error("Request body:", JSON.stringify(req.body));
       if (err instanceof Error) {
         return res.status(500).json({ error: err.message });
       }
