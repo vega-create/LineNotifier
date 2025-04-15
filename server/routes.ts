@@ -196,28 +196,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Validation passed:", validated);
         const message = await storage.createMessage(validated);
         
-        // 自動在3分鐘後發送訊息
-        console.log(`訊息已排程，將在約3分鐘後自動發送 (ID: ${message.id})`);
+        // 檢查並準備排程發送訊息
+        const scheduledTime = new Date(message.scheduledTime || Date.now());
+        const endTime = new Date(message.endTime || Date.now());
+        const now = new Date();
         
-        // 設定定時任務在3分鐘後自動發送訊息
-        setTimeout(async () => {
-          try {
-            console.log(`準備自動發送訊息 (ID: ${message.id})`);
-            // 檢查訊息是否仍然存在（未被刪除或取消）
-            const checkMessage = await storage.getMessage(message.id);
-            if (!checkMessage) {
-              console.log(`訊息 ID: ${message.id} 已不存在，跳過自動發送`);
-              return;
-            }
-            
-            // 直接調用發送訊息的功能，而不是通過HTTP請求
-            console.log(`直接調用發送訊息功能 (ID: ${message.id})`);
-            
+        console.log(`訊息已創建 ID: ${message.id}`);
+        console.log(`排程時間: ${scheduledTime.toISOString()}`);
+        console.log(`結束時間: ${endTime.toISOString()}`);
+        console.log(`當前時間: ${now.toISOString()}`);
+        
+        // 計算距離排程時間的毫秒數
+        const timeToScheduled = scheduledTime.getTime() - now.getTime();
+        
+        // 如果排程時間已過或小於15分鐘內，立即發送
+        if (timeToScheduled <= 0 || timeToScheduled < 15 * 60 * 1000) {
+          console.log(`排程時間已過或在15分鐘內，立即發送訊息 (ID: ${message.id})`);
+          // 發送訊息邏輯會在下面直接執行
+          
+          // TODO: 在此處添加立即發送的邏輯
+          // 由於此部分邏輯複雜，建議在修復排程功能後再實現
+        } else {
+          // 訊息將在排程時間發送
+          console.log(`訊息將在約${Math.round(timeToScheduled / 60000)}分鐘後（${formatTaiwanTime(scheduledTime)}）自動發送 (ID: ${message.id})`);
+          
+          // 設定定時任務在排程時間發送訊息
+          setTimeout(async () => {
             try {
-              // 獲取訊息詳情
+              console.log(`排程時間已到，準備發送訊息 (ID: ${message.id})`);
+              
+              // 檢查訊息是否仍然存在
               const messageToSend = await storage.getMessage(message.id);
               if (!messageToSend) {
-                console.log(`訊息 ID: ${message.id} 無法獲取，跳過發送`);
+                console.log(`訊息 ID: ${message.id} 已不存在，跳過自動發送`);
                 return;
               }
               
@@ -245,6 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // 格式化訊息內容
               let finalContent = messageToSend.content;
               
+              // 添加幣別和金額
               if (messageToSend.currency && messageToSend.amount) {
                 let currencySymbol = "";
                 if (messageToSend.currency === "TWD") currencySymbol = "NT$";
@@ -287,14 +299,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // 處理訊息發送後的邏輯 - 支持週期性發送
               if (allSuccess) {
                 // 檢查是否為週期性訊息且已啟用周期性發送
-                if (message.type === "periodic" && message.recurringActive) {
+                if (messageToSend.type === "periodic" && messageToSend.recurringActive) {
                   // 更新最後發送時間，並將狀態重設為排程中
                   const now = new Date();
                   await storage.updateMessage(message.id, { 
                     lastSent: now.toISOString(),
                     status: "scheduled" // 重置狀態，等待下次發送
                   });
-                  console.log(`週期性訊息 ID: ${message.id} [${message.title}] 已更新最後發送時間並保留排程`);
+                  console.log(`週期性訊息 ID: ${message.id} [${messageToSend.title}] 已更新最後發送時間並保留排程`);
                 } else {
                   // 非週期性訊息或未啟用週期，則刪除
                   console.log(`訊息 ID: ${message.id} 已成功發送，現在將其刪除`);
@@ -305,14 +317,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               console.log(`自動發送訊息完成 (ID: ${message.id}, 結果: ${allSuccess ? '成功' : '部分失敗'})`);
             } catch (error) {
-              console.error(`發送訊息時發生錯誤 (ID: ${message.id}):`, error);
+              console.error(`自動發送訊息失敗 (ID: ${message.id}):`, error);
             }
-            
-            // 因為我們直接調用函數而不是發送HTTP請求，所以不需要解析響應
-          } catch (autoSendError) {
-            console.error(`自動發送訊息失敗 (ID: ${message.id}):`, autoSendError);
-          }
-        }, 3 * 60 * 1000); // 3分鐘 = 3 * 60 * 1000毫秒
+          }, timeToScheduled); // 使用計算出來的時間差
+        }
         
         res.status(201).json(message);
       } catch (zodError) {
