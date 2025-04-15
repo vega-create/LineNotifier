@@ -204,7 +204,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // 處理排程發送邏輯 - 使用moment-timezone確保時區一致性
         // 將排程時間和當前時間都轉換為台灣時間
-        const scheduledTimeTW = moment(message.scheduledTime || Date.now()).tz("Asia/Taipei");
+        // 確保排程時間必須存在，不要使用當前時間作為默認值
+        if (!message.scheduledTime) {
+          console.error("錯誤：訊息排程時間未設置");
+          return res.status(400).json({ error: "排程時間不能為空" });
+        }
+        const scheduledTimeTW = moment(message.scheduledTime).tz("Asia/Taipei");
         const nowTW = moment().tz("Asia/Taipei");
         
         console.log(`訊息已創建 ID: ${message.id}`);
@@ -506,10 +511,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const message of recurringMessages) {
         try {
           // 使用moment-timezone轉換時間
-          // 如果沒有最後發送時間，則設置為訊息創建時間
+          // 確保排程時間必須存在
+          if (!message.scheduledTime) {
+            console.error(`錯誤：週期性訊息 ${message.id} 的排程時間未設置`);
+            continue;
+          }
+          
+          // 如果沒有最後發送時間，則設置為系統初始化時間
           const lastSentTW = message.lastSent 
             ? moment(message.lastSent).tz("Asia/Taipei") 
-            : moment(message.createdAt || message.scheduledTime).tz("Asia/Taipei");
+            : moment(message.scheduledTime).tz("Asia/Taipei");
             
           const scheduledTimeTW = moment(message.scheduledTime).tz("Asia/Taipei");
           
