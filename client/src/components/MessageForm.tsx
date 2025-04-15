@@ -232,7 +232,7 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       // 顯示成功訊息
       toast({
         title: "訊息已成功排程",
-        description: "訊息已成功建立，將在排程時間自動發送並自動從排程列表中移除。",
+        description: `訊息已成功安排在 ${format(form.getValues("scheduledDate"), "yyyy/MM/dd")} ${form.getValues("startTime")} 發送。`,
       });
     } catch (error) {
       console.error("Error sending message:", error);
