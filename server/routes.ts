@@ -12,6 +12,10 @@ import {
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import fetch from "node-fetch";
+import moment from "moment-timezone";
+
+// 將默認時區設置為台灣時間
+moment.tz.setDefault("Asia/Taipei");
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const router = express.Router();
@@ -198,20 +202,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 創建消息
         const message = await storage.createMessage(validated);
         
-        // 處理排程發送邏輯
-        const scheduledTime = new Date(message.scheduledTime || Date.now());
-        const now = new Date();
+        // 處理排程發送邏輯 - 使用moment-timezone確保時區一致性
+        // 將排程時間和當前時間都轉換為台灣時間
+        const scheduledTimeTW = moment(message.scheduledTime || Date.now()).tz("Asia/Taipei");
+        const nowTW = moment().tz("Asia/Taipei");
         
         console.log(`訊息已創建 ID: ${message.id}`);
-        console.log(`排程時間: ${scheduledTime.toISOString()}`);
-        console.log(`當前時間: ${now.toISOString()}`);
+        console.log(`排程時間 (UTC): ${scheduledTimeTW.toDate().toISOString()}`);
+        console.log(`當前時間 (UTC): ${nowTW.toDate().toISOString()}`);
         
-        // 確保正確處理台灣時間（UTC+8）
-        console.log(`排程時間 (台灣): ${formatTaiwanTime(scheduledTime)}`);
-        console.log(`當前時間 (台灣): ${formatTaiwanTime(now)}`);
+        // 使用moment格式化日期時間
+        console.log(`排程時間 (台灣): ${scheduledTimeTW.format("YYYY/MM/DD HH:mm:ss")} 台灣時間`);
+        console.log(`當前時間 (台灣): ${nowTW.format("YYYY/MM/DD HH:mm:ss")} 台灣時間`);
         
-        // 計算距離排程時間的毫秒數
-        let timeToScheduled = scheduledTime.getTime() - now.getTime();
+        // 計算距離排程時間的毫秒數 - 使用moment的diff函數
+        let timeToScheduled = scheduledTimeTW.diff(nowTW);
         console.log(`預計等待時間: ${Math.round(timeToScheduled / 60000)} 分鐘`);
         
         // 僅當排程時間已過才立即發送，否則按照排程時間發送
@@ -221,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // 輸出預計發送時間
-        console.log(`訊息將在指定時間（${formatTaiwanTime(scheduledTime)}）自動發送 (ID: ${message.id})`);
+        console.log(`訊息將在指定時間（${scheduledTimeTW.format("YYYY/MM/DD HH:mm:ss")} 台灣時間）自動發送 (ID: ${message.id})`);
         
         // 設定發送任務
         setTimeout(async () => {
@@ -435,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // 檢查並發送週期性訊息
-  // 設置定時任務，每5分鐘檢查一次
+  // 設置定時任務，每分鐘檢查一次
   setInterval(async () => {
     try {
       console.log("檢查週期性訊息排程...");
@@ -452,102 +457,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`找到 ${recurringMessages.length} 個啟用的週期性訊息`);
       
-      const now = new Date();
+      // 使用moment-timezone獲取台灣當前時間
+      const nowTW = moment().tz("Asia/Taipei");
       
       for (const message of recurringMessages) {
         try {
+          // 使用moment-timezone轉換時間
           // 如果沒有最後發送時間，則設置為訊息創建時間
-          const lastSent = message.lastSent ? new Date(message.lastSent) : new Date(message.createdAt || message.scheduledTime);
-          const scheduledTime = new Date(message.scheduledTime);
+          const lastSentTW = message.lastSent 
+            ? moment(message.lastSent).tz("Asia/Taipei") 
+            : moment(message.createdAt || message.scheduledTime).tz("Asia/Taipei");
+            
+          const scheduledTimeTW = moment(message.scheduledTime).tz("Asia/Taipei");
           
           // 檢查是否應該發送（根據週期性類型判斷）
           let shouldSend = false;
           
-          // 將排程時間和當前時間轉換為台灣時間（UTC+8）
-          const taiwanScheduledTime = new Date(scheduledTime);
-          taiwanScheduledTime.setHours(taiwanScheduledTime.getHours() + 8);
-          
-          const taiwanNow = new Date(now);
-          taiwanNow.setHours(taiwanNow.getHours() + 8);
-          
           // 從排程時間獲取台灣時間的小時和分鐘，作為每天發送的時間點
-          const scheduledHour = taiwanScheduledTime.getUTCHours();
-          const scheduledMinute = taiwanScheduledTime.getUTCMinutes();
+          const scheduledHour = scheduledTimeTW.hour();
+          const scheduledMinute = scheduledTimeTW.minute();
           
           // 當前台灣時間的小時和分鐘
-          const currentHour = taiwanNow.getUTCHours();
-          const currentMinute = taiwanNow.getUTCMinutes();
+          const currentHour = nowTW.hour();
+          const currentMinute = nowTW.minute();
           
           console.log(`檢查週期性訊息 ID: ${message.id}, 標題: ${message.title}`);
-          console.log(`上次發送時間: ${lastSent.toISOString()}`);
-          console.log(`排程時間: ${scheduledTime.toISOString()}, ${scheduledHour}:${scheduledMinute}`);
-          console.log(`當前時間: ${now.toISOString()}, ${currentHour}:${currentMinute}`);
+          console.log(`上次發送時間: ${lastSentTW.format("YYYY/MM/DD HH:mm:ss")}`);
+          console.log(`排程時間: ${scheduledTimeTW.format("YYYY/MM/DD HH:mm:ss")}, ${scheduledHour}:${scheduledMinute}`);
+          console.log(`當前時間: ${nowTW.format("YYYY/MM/DD HH:mm:ss")}, ${currentHour}:${currentMinute}`);
           console.log(`週期類型: ${message.recurringType}`);
           
+          // 使用moment-timezone處理週期性判斷
           switch (message.recurringType) {
             case "daily":
-              // 使用台灣時間判斷，如果當前時間與設定時間相符（小時和分鐘），且上次發送不是今天
-              const taiwanLastSent = new Date(lastSent);
-              taiwanLastSent.setHours(taiwanLastSent.getHours() + 8);
-              
+              // 如果當前時間與設定時間相符（小時和分鐘），且上次發送不是今天
               if (currentHour === scheduledHour && 
                   currentMinute >= scheduledMinute && 
-                  currentMinute < scheduledMinute + 5 && // 5分鐘內為有效執行時間
-                  (taiwanLastSent.getUTCDate() !== taiwanNow.getUTCDate() || 
-                   taiwanLastSent.getUTCMonth() !== taiwanNow.getUTCMonth() || 
-                   taiwanLastSent.getUTCFullYear() !== taiwanNow.getUTCFullYear())) {
-                shouldSend = true;
-                console.log(`每日訊息該發送了: ${message.title}`);
+                  currentMinute < scheduledMinute + 5) { // 5分鐘內為有效執行時間
+                  
+                // 檢查是否已經在今天發送過
+                const isSameDay = lastSentTW.isSame(nowTW, 'day');
+                if (!isSameDay) {
+                  shouldSend = true;
+                  console.log(`每日訊息該發送了: ${message.title}`);
+                } else {
+                  console.log(`每日訊息今天已發送過: ${message.title}`);
+                }
               }
               break;
               
             case "weekly":
-              // 使用台灣時間判斷，如果當前時間與設定時間相符，且是同一個星期幾，且上次發送不是本週
-              // 確保上次發送時間轉換為台灣時間
-              const taiwanLastSentWeekly = new Date(lastSent);
-              taiwanLastSentWeekly.setHours(taiwanLastSentWeekly.getHours() + 8);
-              
+              // 如果當前時間與設定時間相符，且是同一個星期幾，且上次發送不是本週
               if (currentHour === scheduledHour && 
                   currentMinute >= scheduledMinute && 
                   currentMinute < scheduledMinute + 5 &&
-                  taiwanNow.getUTCDay() === taiwanScheduledTime.getUTCDay() && // 同一個星期幾
-                  (taiwanNow.getTime() - taiwanLastSentWeekly.getTime() > 6 * 24 * 60 * 60 * 1000)) { // 至少6天前發送的
-                shouldSend = true;
-                console.log(`每週訊息該發送了: ${message.title}`);
+                  nowTW.day() === scheduledTimeTW.day()) { // 同一個星期幾
+                  
+                // 檢查是否已經在本週發送過
+                const isSameWeek = lastSentTW.isSame(nowTW, 'week');
+                if (!isSameWeek) {
+                  shouldSend = true;
+                  console.log(`每週訊息該發送了: ${message.title}`);
+                } else {
+                  console.log(`每週訊息本週已發送過: ${message.title}`);
+                }
               }
               break;
               
             case "monthly":
-              // 使用台灣時間判斷，如果當前時間與設定時間相符，且是同一個月份日期，且上次發送不是本月
-              // 確保上次發送時間轉換為台灣時間
-              const taiwanLastSentMonthly = new Date(lastSent);
-              taiwanLastSentMonthly.setHours(taiwanLastSentMonthly.getHours() + 8);
-              
+              // 如果當前時間與設定時間相符，且是同一個月份日期，且上次發送不是本月
               if (currentHour === scheduledHour && 
                   currentMinute >= scheduledMinute && 
                   currentMinute < scheduledMinute + 5 &&
-                  taiwanNow.getUTCDate() === taiwanScheduledTime.getUTCDate() && // 同一個月份日期
-                  (taiwanNow.getUTCMonth() !== taiwanLastSentMonthly.getUTCMonth() || 
-                   taiwanNow.getUTCFullYear() !== taiwanLastSentMonthly.getUTCFullYear())) {
-                shouldSend = true;
-                console.log(`每月訊息該發送了: ${message.title}`);
+                  nowTW.date() === scheduledTimeTW.date()) { // 同一個月份日期
+                  
+                // 檢查是否已經在本月發送過
+                const isSameMonth = lastSentTW.isSame(nowTW, 'month');
+                if (!isSameMonth) {
+                  shouldSend = true;
+                  console.log(`每月訊息該發送了: ${message.title}`);
+                } else {
+                  console.log(`每月訊息本月已發送過: ${message.title}`);
+                }
               }
               break;
               
             case "yearly":
-              // 使用台灣時間判斷，如果當前時間與設定時間相符，且是同一個月份和日期，且上次發送不是今年
-              // 確保上次發送時間轉換為台灣時間
-              const taiwanLastSentYearly = new Date(lastSent);
-              taiwanLastSentYearly.setHours(taiwanLastSentYearly.getHours() + 8);
-              
+              // 如果當前時間與設定時間相符，且是同一個月份和日期，且上次發送不是今年
               if (currentHour === scheduledHour && 
                   currentMinute >= scheduledMinute && 
                   currentMinute < scheduledMinute + 5 &&
-                  taiwanNow.getUTCDate() === taiwanScheduledTime.getUTCDate() && 
-                  taiwanNow.getUTCMonth() === taiwanScheduledTime.getUTCMonth() && // 同一個月份和日期
-                  taiwanNow.getUTCFullYear() !== taiwanLastSentYearly.getUTCFullYear()) { // 不是今年發送的
-                shouldSend = true;
-                console.log(`每年訊息該發送了: ${message.title}`);
+                  nowTW.date() === scheduledTimeTW.date() && 
+                  nowTW.month() === scheduledTimeTW.month()) { // 同一個月份和日期
+                  
+                // 檢查是否已經在今年發送過
+                const isSameYear = lastSentTW.isSame(nowTW, 'year');
+                if (!isSameYear) {
+                  shouldSend = true;
+                  console.log(`每年訊息該發送了: ${message.title}`);
+                } else {
+                  console.log(`每年訊息今年已發送過: ${message.title}`);
+                }
               }
               break;
           }
@@ -620,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const newStatus = "scheduled"; // 週期性訊息保持排程狀態
             await storage.updateMessage(message.id, { 
               status: newStatus,
-              lastSent: now.toISOString()
+              lastSent: nowTW.toDate().toISOString() // 使用moment的台灣時間
             });
             
             console.log(`週期性訊息 ID: ${message.id} 已處理完畢，結果: ${allSuccess ? '成功' : '部分失敗'}`);
@@ -634,22 +644,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, 1 * 60 * 1000); // 1分鐘檢查一次
   
-  // 輔助函數：格式化台灣時間（GMT+8）
+  // 輔助函數：使用moment-timezone格式化台灣時間（GMT+8）
   function formatTaiwanTime(date: Date): string {
-    // 複製日期對象以避免修改原始日期
-    const taiwanDate = new Date(date);
-    // 將UTC時間轉換為台灣時間（UTC+8）
-    taiwanDate.setHours(taiwanDate.getHours() + 8);
-    
-    // 格式化為 YYYY/MM/DD HH:MM:SS 台灣時間
-    const year = taiwanDate.getUTCFullYear();
-    const month = String(taiwanDate.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(taiwanDate.getUTCDate()).padStart(2, '0');
-    const hours = String(taiwanDate.getUTCHours()).padStart(2, '0');
-    const minutes = String(taiwanDate.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(taiwanDate.getUTCSeconds()).padStart(2, '0');
-    
-    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds} 台灣時間`;
+    // 使用moment-timezone將UTC時間轉換為台灣時間
+    return moment(date).tz("Asia/Taipei").format("YYYY/MM/DD HH:mm:ss") + " 台灣時間";
+  }
+  
+  // 輔助函數：取得台灣當前時間(Date物件)
+  function getTaiwanTime(): Date {
+    return moment().tz("Asia/Taipei").toDate();
+  }
+  
+  // 輔助函數：將UTC日期轉換為台灣時間的Date物件
+  function convertToTaiwanTime(date: Date): Date {
+    return moment(date).tz("Asia/Taipei").toDate();
   }
 
   // Helper function to send LINE messages
@@ -842,10 +850,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           // 檢查是否為週期性訊息並且已啟用週期性發送
           if (message.type === "periodic" && message.recurringActive) {
-            // 更新最後發送時間並重置狀態為排程中
-            const now = new Date();
+            // 更新最後發送時間並重置狀態為排程中 (使用台灣時間)
+            const taiwanNow = moment().tz("Asia/Taipei");
             const updatedMessage = await storage.updateMessage(message.id, {
-              lastSent: now.toISOString(),
+              lastSent: taiwanNow.toDate().toISOString(),
               status: "scheduled" // 重置狀態，等待下次發送
             });
             
