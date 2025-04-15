@@ -23,6 +23,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import moment from "moment-timezone";
+
+// 設定時區為台灣時區
+moment.tz.setDefault("Asia/Taipei");
 
 const formSchema = z.object({
   title: z.string().min(1, "訊息標題不能為空"),
@@ -159,26 +163,28 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       const [startHour, startMinute] = data.startTime.split(":").map(Number);
       const [endHour, endMinute] = data.endTime.split(":").map(Number);
       
-      // 將日期轉換為格式化的字符串，確保使用台灣時區
-      const scheduleDate = new Date(data.scheduledDate);
+      // 使用moment-timezone處理時間，確保使用台灣時區
+      const scheduleDate = moment(data.scheduledDate).tz("Asia/Taipei");
       
-      // 設置排程開始時間
-      const scheduleTime = new Date(scheduleDate);
-      scheduleTime.setHours(startHour, startMinute, 0);
+      // 設置排程開始時間 (使用moment處理)
+      const scheduleTime = moment(scheduleDate)
+        .hour(startHour)
+        .minute(startMinute)
+        .second(0);
       
-      // 設置排程結束時間
-      const endTime = new Date(scheduleDate);
-      endTime.setHours(endHour, endMinute, 0);
+      // 設置排程結束時間 (使用moment處理)
+      const endTime = moment(scheduleDate)
+        .hour(endHour)
+        .minute(endMinute)
+        .second(0);
       
-      // 注意：由於時區問題，需要確保時間是以台灣時區為基準
-      console.log("準備發送訊息，日期時間:", {
-        scheduledDate: scheduleDate.toISOString(),
-        scheduleTime: scheduleTime.toISOString(),
-        // 顯示更多細節以便診斷
-        scheduleTimeLocal: `${scheduleTime.getFullYear()}-${scheduleTime.getMonth()+1}-${scheduleTime.getDate()} ${scheduleTime.getHours()}:${scheduleTime.getMinutes()}:${scheduleTime.getSeconds()}`,
-        endTime: endTime.toISOString(),
-        currentTimeStamp: Date.now(),
-        timeDifference: scheduleTime.getTime() - Date.now()
+      // 輸出日誌，便於診斷
+      console.log("準備發送訊息，台灣時區日期時間:", {
+        scheduledDate: scheduleDate.format("YYYY-MM-DD HH:mm:ss"),
+        scheduleTime: scheduleTime.format("YYYY-MM-DD HH:mm:ss"),
+        endTime: endTime.format("YYYY-MM-DD HH:mm:ss"),
+        currentTimeStamp: moment().tz("Asia/Taipei").format("YYYY-MM-DD HH:mm:ss"),
+        timeDifference: scheduleTime.diff(moment(), 'minutes') + " 分鐘"
       });
       
       // 格式化時間為ISO字符串以符合後端期望的格式
@@ -186,8 +192,8 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
         title: data.title,
         content: data.content,
         type: data.type,
-        scheduledTime: scheduleTime.toISOString(),
-        endTime: endTime.toISOString(),
+        scheduledTime: scheduleTime.toISOString(), // 將moment對象轉換為ISO字符串
+        endTime: endTime.toISOString(), // 將moment對象轉換為ISO字符串
         status: "scheduled",
         groupIds: data.groups,
         currency: data.currency,
@@ -236,10 +242,10 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
         onSuccess();
       }
       
-      // 顯示成功訊息
+      // 顯示成功訊息，使用moment處理日期格式
       toast({
         title: "訊息排程成功",
-        description: `訊息將在 ${format(form.getValues("scheduledDate"), "yyyy/MM/dd")} ${form.getValues("startTime")} 準確推播，而非立即發送。系統會在您指定的時間自動發送訊息。`,
+        description: `訊息將在 ${moment(form.getValues("scheduledDate")).format("YYYY/MM/DD")} ${form.getValues("startTime")} 準確推播，而非立即發送。系統會在您指定的時間自動發送訊息。`,
       });
     } catch (error) {
       console.error("Error sending message:", error);
