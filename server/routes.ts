@@ -219,13 +219,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let timeToScheduled = scheduledTimeTW.diff(nowTW);
         console.log(`實際等待時間: ${Math.round(timeToScheduled / 60000)} 分鐘 (${timeToScheduled} 毫秒)`);
         
+        // 添加詳細的日誌輸出，用於診斷時間計算問題
+        console.log(`原始timeToScheduled值: ${timeToScheduled} 毫秒`);
+        console.log(`前端發送的排程時間: ${message.scheduledTime}`);
+        console.log(`排程timestamp: ${new Date(message.scheduledTime).getTime()}`);
+        console.log(`當前timestamp: ${Date.now()}`);
+        
         // 如果是排定在當前時間之前的訊息，立即發送
         if (timeToScheduled <= 0) {
           console.log(`排程時間已過，立即發送訊息 (ID: ${message.id})`);
           timeToScheduled = 1000; // 使用1秒延遲讓伺服器有時間回應API請求
-        } 
-        // 注意：這裡移除了原本限制最大等待時間為30分鐘的代碼
-        // 現在訊息會在確切的排程時間發送，而不是3分鐘後
+        } else {
+          console.log(`訊息將在 ${Math.round(timeToScheduled / 60000)} 分鐘後發送 (確切毫秒數: ${timeToScheduled})`);
+        }
+        // 注意：我們已完全移除限制最大等待時間的代碼，確保訊息在指定時間發送
 
         // 輸出預計發送時間
         const scheduledSendTime = moment().tz("Asia/Taipei").add(timeToScheduled, 'milliseconds');

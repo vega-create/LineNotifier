@@ -159,19 +159,26 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       const [startHour, startMinute] = data.startTime.split(":").map(Number);
       const [endHour, endMinute] = data.endTime.split(":").map(Number);
       
-      // 將日期轉換為格式化的字符串
+      // 將日期轉換為格式化的字符串，確保使用台灣時區
       const scheduleDate = new Date(data.scheduledDate);
-      // 設置時間
+      
+      // 設置排程開始時間
       const scheduleTime = new Date(scheduleDate);
       scheduleTime.setHours(startHour, startMinute, 0);
       
+      // 設置排程結束時間
       const endTime = new Date(scheduleDate);
       endTime.setHours(endHour, endMinute, 0);
       
+      // 注意：由於時區問題，需要確保時間是以台灣時區為基準
       console.log("準備發送訊息，日期時間:", {
         scheduledDate: scheduleDate.toISOString(),
         scheduleTime: scheduleTime.toISOString(),
-        endTime: endTime.toISOString()
+        // 顯示更多細節以便診斷
+        scheduleTimeLocal: `${scheduleTime.getFullYear()}-${scheduleTime.getMonth()+1}-${scheduleTime.getDate()} ${scheduleTime.getHours()}:${scheduleTime.getMinutes()}:${scheduleTime.getSeconds()}`,
+        endTime: endTime.toISOString(),
+        currentTimeStamp: Date.now(),
+        timeDifference: scheduleTime.getTime() - Date.now()
       });
       
       // 格式化時間為ISO字符串以符合後端期望的格式
