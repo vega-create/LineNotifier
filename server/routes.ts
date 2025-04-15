@@ -401,15 +401,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`排程時間: ${scheduledTime.format("YYYY/MM/DD HH:mm:ss")}`);
           console.log(`當前時間: ${nowTW.format("YYYY/MM/DD HH:mm:ss")}`);
           
-          // 判斷時間是否一致（同一年、月、日、小時和分鐘）
-          const sameHour = nowTW.hour() === scheduledTime.hour();
-          const sameMinute = nowTW.minute() === scheduledTime.minute();
-          const sameDay = nowTW.date() === scheduledTime.date();
-          const sameMonth = nowTW.month() === scheduledTime.month();
-          const sameYear = nowTW.year() === scheduledTime.year();
+          // 將排程時間和當前時間轉換為毫秒級的時間戳進行比較
+          const scheduledTimestamp = scheduledTime.valueOf(); // 轉為毫秒
+          const nowTimestamp = nowTW.valueOf(); // 轉為毫秒
           
-          // 只有在年、月、日、小時和分鐘都一致時，才發送訊息
-          if (sameYear && sameMonth && sameDay && sameHour && sameMinute) {
+          // 判斷當前時間是否已經到達或超過排程時間
+          // 這樣即使錯過了精確的分鐘，也能確保訊息被發送
+          if (nowTimestamp >= scheduledTimestamp) {
             console.log(`單次訊息 ${message.id} 已到發送時間，準備發送...`);
             
             // 以下是發送訊息的處理邏輯
@@ -544,9 +542,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // 使用moment-timezone處理週期性判斷
           switch (message.recurringType) {
             case "daily":
-              // 如果當前時間與設定時間完全相符（小時和分鐘），且上次發送不是今天
-              if (currentHour === scheduledHour && 
-                  currentMinute === scheduledMinute) { // 只在精確分鐘發送
+              // 如果當前時間達到或超過設定時間，且上次發送不是今天
+              // 將時間轉換為分鐘進行比較，例如 14:30 轉為 14*60+30=870分鐘
+              const currentTotalMinutes = currentHour * 60 + currentMinute;
+              const scheduledTotalMinutes = scheduledHour * 60 + scheduledMinute;
+              
+              if (currentTotalMinutes >= scheduledTotalMinutes) { // 只要達到或超過設定時間就發送
                   
                 // 檢查是否已經在今天發送過
                 const isSameDay = lastSentTW.isSame(nowTW, 'day');
