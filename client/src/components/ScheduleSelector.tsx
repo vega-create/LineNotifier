@@ -37,8 +37,8 @@ export default function ScheduleSelector({ form }: ScheduleSelectorProps) {
       
       <div className="bg-gray-50 p-4 rounded-md">
         <div className="mb-1">
-          <p className="text-sm text-red-600 font-medium mb-3 p-2 bg-red-50 rounded-md border border-red-200">
-            ⚠️ 注意：由於系統限制，排程訊息通常會在設定後約3分鐘內發送，而非指定時間。如需精確時間發送，建議在希望發送前3分鐘才建立排程。
+          <p className="text-sm text-blue-600 font-medium mb-3 p-2 bg-blue-50 rounded-md border border-blue-200">
+            ℹ️ 提示：排程訊息將會在您設定的時間精確發送。系統會在指定時間檢查並發送訊息，確保訊息在正確的時間到達。
           </p>
         </div>
         <div className="mb-4">
