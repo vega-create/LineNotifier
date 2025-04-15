@@ -222,7 +222,7 @@ export default function ScheduleManagement() {
               <div>
                 <h3 className="font-medium text-blue-900">有訊息正在排隊等待發送</h3>
                 <p className="text-sm text-blue-700">
-                  共有 {scheduledMessages.length} 條訊息將在約3分鐘內自動發送。系統將在發送後自動移除這些訊息。
+                  共有 {scheduledMessages.length} 條訊息將在排程時間自動發送。系統將在發送後自動移除這些訊息。
                 </p>
               </div>
             </div>
