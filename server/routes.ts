@@ -206,27 +206,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`排程時間: ${scheduledTime.toISOString()}`);
         console.log(`當前時間: ${now.toISOString()}`);
         
-        // 處理台灣時間（UTC+8）
-        // 注意：系統已包含Taiwan時區設定，不需再加8小時
-        const taiwanScheduledTime = new Date(scheduledTime);
+        // 確保正確處理台灣時間（UTC+8）
+        console.log(`排程時間 (台灣): ${formatTaiwanTime(scheduledTime)}`);
+        console.log(`當前時間 (台灣): ${formatTaiwanTime(now)}`);
         
-        const taiwanNow = new Date(now);
-        
-        // 計算距離排程時間的毫秒數（使用台灣時間）
-        let timeToScheduled = taiwanScheduledTime.getTime() - taiwanNow.getTime();
-        
-        console.log(`排程時間 (台灣): ${taiwanScheduledTime.toISOString()}`);
-        console.log(`當前時間 (台灣): ${taiwanNow.toISOString()}`);
+        // 計算距離排程時間的毫秒數
+        let timeToScheduled = scheduledTime.getTime() - now.getTime();
         console.log(`預計等待時間: ${Math.round(timeToScheduled / 60000)} 分鐘`);
         
-        // 僅當排程時間已過才立即發送
+        // 僅當排程時間已過才立即發送，否則按照排程時間發送
         if (timeToScheduled <= 0) {
           console.log(`排程時間已過，立即發送訊息 (ID: ${message.id})`);
           timeToScheduled = 1000; // 使用1秒延遲讓伺服器有時間回應API請求
         }
 
         // 輸出預計發送時間
-        console.log(`訊息將在約${Math.round(timeToScheduled / 60000)}分鐘後（${formatTaiwanTime(scheduledTime)}）自動發送 (ID: ${message.id})`);
+        console.log(`訊息將在指定時間（${formatTaiwanTime(scheduledTime)}）自動發送 (ID: ${message.id})`);
         
         // 設定發送任務
         setTimeout(async () => {
