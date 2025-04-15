@@ -540,12 +540,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`週期類型: ${message.recurringType}`);
           
           // 使用moment-timezone處理週期性判斷
+          // 將時間轉換為分鐘進行比較，例如 14:30 轉為 14*60+30=870分鐘
+          const currentTotalMinutes = currentHour * 60 + currentMinute;
+          const scheduledTotalMinutes = scheduledHour * 60 + scheduledMinute;
+          
           switch (message.recurringType) {
             case "daily":
               // 如果當前時間達到或超過設定時間，且上次發送不是今天
-              // 將時間轉換為分鐘進行比較，例如 14:30 轉為 14*60+30=870分鐘
-              const currentTotalMinutes = currentHour * 60 + currentMinute;
-              const scheduledTotalMinutes = scheduledHour * 60 + scheduledMinute;
               
               if (currentTotalMinutes >= scheduledTotalMinutes) { // 只要達到或超過設定時間就發送
                   
@@ -561,9 +562,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
               
             case "weekly":
-              // 如果當前時間與設定時間完全相符，且是同一個星期幾，且上次發送不是本週
-              if (currentHour === scheduledHour && 
-                  currentMinute === scheduledMinute &&
+              // 如果當前時間達到或超過設定時間，且是同一個星期幾，且上次發送不是本週
+              // 繼續使用前面定義的時間分鐘比較方法
+              if (currentTotalMinutes >= scheduledTotalMinutes &&
                   nowTW.day() === scheduledTimeTW.day()) { // 同一個星期幾
                   
                 // 檢查是否已經在本週發送過
@@ -578,9 +579,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
               
             case "monthly":
-              // 如果當前時間與設定時間完全相符，且是同一個月份日期，且上次發送不是本月
-              if (currentHour === scheduledHour && 
-                  currentMinute === scheduledMinute &&
+              // 如果當前時間達到或超過設定時間，且是同一個月份日期，且上次發送不是本月
+              // 繼續使用前面定義的時間分鐘比較方法
+              if (currentTotalMinutes >= scheduledTotalMinutes &&
                   nowTW.date() === scheduledTimeTW.date()) { // 同一個月份日期
                   
                 // 檢查是否已經在本月發送過
@@ -595,9 +596,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
               
             case "yearly":
-              // 如果當前時間與設定時間完全相符，且是同一個月份和日期，且上次發送不是今年
-              if (currentHour === scheduledHour && 
-                  currentMinute === scheduledMinute &&
+              // 如果當前時間達到或超過設定時間，且是同一個月份和日期，且上次發送不是今年
+              // 繼續使用前面定義的時間分鐘比較方法
+              if (currentTotalMinutes >= scheduledTotalMinutes &&
                   nowTW.date() === scheduledTimeTW.date() && 
                   nowTW.month() === scheduledTimeTW.month()) { // 同一個月份和日期
                   
