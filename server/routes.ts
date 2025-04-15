@@ -396,8 +396,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`排程時間: ${scheduledTime.format("YYYY/MM/DD HH:mm:ss")}`);
           console.log(`當前時間: ${nowTW.format("YYYY/MM/DD HH:mm:ss")}`);
           
-          // 如果當前時間已經超過或等於排程時間，則發送訊息
-          if (nowTW.isSameOrAfter(scheduledTime)) {
+          // 判斷時間是否一致（同一年、月、日、小時和分鐘）
+          const sameHour = nowTW.hour() === scheduledTime.hour();
+          const sameMinute = nowTW.minute() === scheduledTime.minute();
+          const sameDay = nowTW.date() === scheduledTime.date();
+          const sameMonth = nowTW.month() === scheduledTime.month();
+          const sameYear = nowTW.year() === scheduledTime.year();
+          
+          // 只有在年、月、日、小時和分鐘都一致時，才發送訊息
+          if (sameYear && sameMonth && sameDay && sameHour && sameMinute) {
             console.log(`單次訊息 ${message.id} 已到發送時間，準備發送...`);
             
             // 以下是發送訊息的處理邏輯
