@@ -225,18 +225,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`排程timestamp: ${new Date(message.scheduledTime).getTime()}`);
         console.log(`當前timestamp: ${Date.now()}`);
         
-        // 如果是排定在當前時間之前的訊息，立即發送
+        // 無論時間是過去還是未來，都由定時檢查機制在指定時間發送
+        console.log(`訊息將在排程檢查時符合條件時發送 (ID: ${message.id})`);
+        // 不再使用立即發送機制，確保所有訊息都經過排程檢查機制處理
+        console.log(`距離指定時間 ${Math.round(timeToScheduled / 60000)} 分鐘 (確切毫秒數: ${timeToScheduled})`);
+        // 如果是過去時間，提醒用戶
         if (timeToScheduled <= 0) {
-          console.log(`排程時間已過，立即發送訊息 (ID: ${message.id})`);
-          timeToScheduled = 1000; // 使用1秒延遲讓伺服器有時間回應API請求
-        } else {
-          console.log(`訊息將在 ${Math.round(timeToScheduled / 60000)} 分鐘後發送 (確切毫秒數: ${timeToScheduled})`);
+          console.log(`注意：排程時間已過，訊息將在下次系統檢查符合條件時發送`);
         }
         // 注意：我們已完全移除限制最大等待時間的代碼，確保訊息在指定時間發送
 
-        // 輸出預計發送時間
-        const scheduledSendTime = moment().tz("Asia/Taipei").add(timeToScheduled, 'milliseconds');
-        console.log(`訊息將在 ${scheduledSendTime.format("YYYY/MM/DD HH:mm:ss")} 台灣時間 自動發送 (ID: ${message.id})`);
+        // 輸出指定發送時間
+        console.log(`訊息將在 ${scheduledTimeTW.format("YYYY/MM/DD HH:mm:ss")} 台灣時間 準確推播 (ID: ${message.id})`);
         
         // 輸出設定時間的詳細信息
         console.log(`=========== 排程訊息詳細計劃 ===========`);
