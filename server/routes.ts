@@ -238,6 +238,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const scheduledSendTime = moment().tz("Asia/Taipei").add(timeToScheduled, 'milliseconds');
         console.log(`訊息將在 ${scheduledSendTime.format("YYYY/MM/DD HH:mm:ss")} 台灣時間 自動發送 (ID: ${message.id})`);
         
+        // 輸出設定時間的詳細信息
+        console.log(`=========== 排程訊息詳細計劃 ===========`);
+        console.log(`訊息ID: ${message.id}, 標題: ${message.title}`);
+        console.log(`將延遲 ${Math.round(timeToScheduled / 1000)} 秒 (${timeToScheduled} 毫秒) 後發送`);
+        console.log(`當前服務器時間: ${new Date().toISOString()}`);
+        console.log(`預計發送時間: ${scheduledSendTime.toDate().toISOString()}`);
+        console.log(`==========================================`);
+        
         // 設定發送任務 - 注意：Node.js的setTimeout最大延遲約為24.8天，對於長時間排程可能需要其他方案
         setTimeout(async () => {
           try {
