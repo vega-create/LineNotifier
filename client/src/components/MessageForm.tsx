@@ -240,13 +240,13 @@ export default function MessageForm({ groups, templates, onSuccess, existingMess
       // Call onSuccess callback if provided
       if (onSuccess) {
         onSuccess();
+      } else {
+        // 僅在未提供onSuccess回調時才顯示默認成功訊息
+        toast({
+          title: "訊息排程成功",
+          description: `訊息將在 ${moment(form.getValues("scheduledDate")).format("YYYY/MM/DD")} ${form.getValues("startTime")} 準確推播，而非立即發送。系統會在您指定的時間自動發送訊息。`,
+        });
       }
-      
-      // 顯示成功訊息，使用moment處理日期格式
-      toast({
-        title: "訊息排程成功",
-        description: `訊息將在 ${moment(form.getValues("scheduledDate")).format("YYYY/MM/DD")} ${form.getValues("startTime")} 準確推播，而非立即發送。系統會在您指定的時間自動發送訊息。`,
-      });
     } catch (error) {
       console.error("Error sending message:", error);
       
