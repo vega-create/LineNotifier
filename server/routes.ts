@@ -533,16 +533,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // 使用moment-timezone處理週期性判斷
           switch (message.recurringType) {
             case "daily":
-              // 如果當前時間與設定時間相符（小時和分鐘），且上次發送不是今天
+              // 如果當前時間與設定時間完全相符（小時和分鐘），且上次發送不是今天
               if (currentHour === scheduledHour && 
-                  currentMinute >= scheduledMinute && 
-                  currentMinute < scheduledMinute + 5) { // 5分鐘內為有效執行時間
+                  currentMinute === scheduledMinute) { // 只在精確分鐘發送
                   
                 // 檢查是否已經在今天發送過
                 const isSameDay = lastSentTW.isSame(nowTW, 'day');
                 if (!isSameDay) {
                   shouldSend = true;
-                  console.log(`每日訊息該發送了: ${message.title}`);
+                  console.log(`每日訊息精確到發送時間，準備發送: ${message.title}`);
                 } else {
                   console.log(`每日訊息今天已發送過: ${message.title}`);
                 }
@@ -550,17 +549,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
               
             case "weekly":
-              // 如果當前時間與設定時間相符，且是同一個星期幾，且上次發送不是本週
+              // 如果當前時間與設定時間完全相符，且是同一個星期幾，且上次發送不是本週
               if (currentHour === scheduledHour && 
-                  currentMinute >= scheduledMinute && 
-                  currentMinute < scheduledMinute + 5 &&
+                  currentMinute === scheduledMinute &&
                   nowTW.day() === scheduledTimeTW.day()) { // 同一個星期幾
                   
                 // 檢查是否已經在本週發送過
                 const isSameWeek = lastSentTW.isSame(nowTW, 'week');
                 if (!isSameWeek) {
                   shouldSend = true;
-                  console.log(`每週訊息該發送了: ${message.title}`);
+                  console.log(`每週訊息精確到發送時間，準備發送: ${message.title}`);
                 } else {
                   console.log(`每週訊息本週已發送過: ${message.title}`);
                 }
@@ -568,17 +566,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
               
             case "monthly":
-              // 如果當前時間與設定時間相符，且是同一個月份日期，且上次發送不是本月
+              // 如果當前時間與設定時間完全相符，且是同一個月份日期，且上次發送不是本月
               if (currentHour === scheduledHour && 
-                  currentMinute >= scheduledMinute && 
-                  currentMinute < scheduledMinute + 5 &&
+                  currentMinute === scheduledMinute &&
                   nowTW.date() === scheduledTimeTW.date()) { // 同一個月份日期
                   
                 // 檢查是否已經在本月發送過
                 const isSameMonth = lastSentTW.isSame(nowTW, 'month');
                 if (!isSameMonth) {
                   shouldSend = true;
-                  console.log(`每月訊息該發送了: ${message.title}`);
+                  console.log(`每月訊息精確到發送時間，準備發送: ${message.title}`);
                 } else {
                   console.log(`每月訊息本月已發送過: ${message.title}`);
                 }
@@ -586,10 +583,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
               
             case "yearly":
-              // 如果當前時間與設定時間相符，且是同一個月份和日期，且上次發送不是今年
+              // 如果當前時間與設定時間完全相符，且是同一個月份和日期，且上次發送不是今年
               if (currentHour === scheduledHour && 
-                  currentMinute >= scheduledMinute && 
-                  currentMinute < scheduledMinute + 5 &&
+                  currentMinute === scheduledMinute &&
                   nowTW.date() === scheduledTimeTW.date() && 
                   nowTW.month() === scheduledTimeTW.month()) { // 同一個月份和日期
                   
@@ -597,7 +593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const isSameYear = lastSentTW.isSame(nowTW, 'year');
                 if (!isSameYear) {
                   shouldSend = true;
-                  console.log(`每年訊息該發送了: ${message.title}`);
+                  console.log(`每年訊息精確到發送時間，準備發送: ${message.title}`);
                 } else {
                   console.log(`每年訊息今年已發送過: ${message.title}`);
                 }
