@@ -36,6 +36,9 @@ export default function ScheduleSelector({ form }: ScheduleSelectorProps) {
       <h3 className="text-md font-medium text-gray-700 mb-4">排程設定</h3>
       
       <div className="bg-gray-50 p-4 rounded-md">
+        <div className="mb-1">
+          <p className="text-xs text-gray-500 italic mb-3">訊息將在指定的排程時間發送，而非在3分鐘內發送</p>
+        </div>
         <div className="mb-4">
           <h4 className="font-medium text-gray-700 mb-2">選擇日期</h4>
           

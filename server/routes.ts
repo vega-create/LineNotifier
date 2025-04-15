@@ -217,18 +217,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // 計算距離排程時間的毫秒數 - 使用moment的diff函數
         let timeToScheduled = scheduledTimeTW.diff(nowTW);
-        console.log(`預計等待時間: ${Math.round(timeToScheduled / 60000)} 分鐘`);
+        console.log(`實際等待時間: ${Math.round(timeToScheduled / 60000)} 分鐘 (${timeToScheduled} 毫秒)`);
         
-        // 僅當排程時間已過才立即發送，否則按照排程時間發送
+        // 如果是排定在當前時間之前的訊息，立即發送
         if (timeToScheduled <= 0) {
           console.log(`排程時間已過，立即發送訊息 (ID: ${message.id})`);
           timeToScheduled = 1000; // 使用1秒延遲讓伺服器有時間回應API請求
-        }
+        } 
+        // 注意：這裡移除了原本限制最大等待時間為30分鐘的代碼
+        // 現在訊息會在確切的排程時間發送，而不是3分鐘後
 
         // 輸出預計發送時間
-        console.log(`訊息將在指定時間（${scheduledTimeTW.format("YYYY/MM/DD HH:mm:ss")} 台灣時間）自動發送 (ID: ${message.id})`);
+        const scheduledSendTime = moment().tz("Asia/Taipei").add(timeToScheduled, 'milliseconds');
+        console.log(`訊息將在 ${scheduledSendTime.format("YYYY/MM/DD HH:mm:ss")} 台灣時間 自動發送 (ID: ${message.id})`);
         
-        // 設定發送任務
+        // 設定發送任務 - 注意：Node.js的setTimeout最大延遲約為24.8天，對於長時間排程可能需要其他方案
         setTimeout(async () => {
           try {
             // 檢查訊息是否仍然存在
@@ -307,9 +310,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (allSuccess) {
               if (messageToSend.type === "periodic" && messageToSend.recurringActive) {
                 // 週期性訊息：更新最後發送時間，並將狀態重設為排程中
-                const now = new Date();
+                // 使用moment-timezone設置台灣時間
+                const nowTaiwan = moment().tz("Asia/Taipei");
                 await storage.updateMessage(message.id, { 
-                  lastSent: now.toISOString(),
+                  lastSent: nowTaiwan.toDate().toISOString(),
                   status: "scheduled" // 重置狀態，等待下次發送
                 });
                 console.log(`週期性訊息 ID: ${message.id} 已更新最後發送時間並保留排程`);
