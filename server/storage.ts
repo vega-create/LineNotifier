@@ -180,7 +180,8 @@ async function initializeDefaultData() {
         { name: "網站工程師（佑展工程師）", lineId: "Cc4237c4173ca718ab0e30eae2e7ca529" },
         { name: "Tina群", lineId: "C164037891996ce50ce13c0cba24e154f" },
         { name: "網站設計師（土蓉）", lineId: "Cf1b26d83e385242632b3970b3f8c622f" },
-        { name: "工程師組", lineId: "C536c0214d33c80eeac1b084953dd168b" }
+        { name: "工程師組", lineId: "C536c0214d33c80eeac1b084953dd168b" },
+        { name: "安可淘比", lineId: "C0087254caf944297a7081be33dc4c8df" } // 特殊處理的群組ID
       ];
 
       for (const group of defaultGroups) {
