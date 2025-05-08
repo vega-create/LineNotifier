@@ -873,6 +873,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // 如果是LINE群組/Bot權限問題
               const errorMessage = `LINE API Error (${response.status}): ${result?.message || response.statusText || resultText}`;
               console.error(`可能原因：1) LINE Bot未加入該群組 2) 群組ID錯誤 3) 無發送權限`);
+              console.error(`詳細錯誤信息：${JSON.stringify(result, null, 2)}`);
+              console.error(`群組ID: ${lineGroupId}`);
               throw new Error(errorMessage);
             }
             
