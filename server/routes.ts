@@ -1313,11 +1313,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 已移除所有LINE Webhook相關處理代碼
-  // 用戶使用另一個LINE機器人實現群組ID查詢功能
-  
-  // 已移除所有LINE Webhook和群組ID查詢相關的API端點
-  // 用戶使用另一個LINE機器人實現群組ID查詢功能
+  // 添加臨時LINE Webhook處理 - 僅用於偶爾需要查詢群組ID
+  // 這是一個獨立功能，不會影響其他群組的發送
+  router.post("/line-webhook-id-query", express.json(), async (req: Request, res: Response) => {
+    try {
+      console.log("收到LINE Webhook查詢ID事件");
+      
+      const events = req.body.events || [];
+      const lineApiToken = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
+      
+      for (const event of events) {
+        // 只處理文字消息
+        if (event.type === 'message' && event.message.type === 'text') {
+          const messageText = event.message.text;
+          const sourceType = event.source.type; // 'user', 'group', 'room'
+          
+          // 只針對群組消息
+          if (sourceType === 'group' && event.source.groupId) {
+            const groupId = event.source.groupId;
+            const groupName = event.source.groupName || "未知群組";
+            
+            // 檢查是否是獲取ID的命令
+            if (messageText === '#查詢ID' || messageText === '#getID') {
+              console.log(`📱 收到群組ID查詢請求，群組ID: ${groupId}`);
+              
+              // 回覆群組ID
+              try {
+                await sendLineMessage(
+                  groupId, 
+                  `📋 此群組的ID是: ${groupId}\n\n此ID可用於發送系統訊息。`, 
+                  lineApiToken
+                );
+                console.log(`✅ 已回覆群組ID查詢，群組ID: ${groupId}`);
+              } catch (sendError) {
+                console.error(`❌ 回覆群組ID時出錯:`, sendError);
+              }
+            }
+          }
+        }
+      }
+      
+      // LINE要求快速回應200狀態碼
+      res.status(200).send('OK');
+    } catch (err) {
+      console.error('處理LINE Webhook ID查詢時出錯:', err);
+      // 即使出錯也返回200，否則LINE會重試
+      res.status(200).send('Error processed');
+    }
+  });
   
   // 最後設置API路由
   app.use("/api", router);
