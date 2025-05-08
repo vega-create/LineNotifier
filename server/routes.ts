@@ -742,69 +742,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn(`Suspicious LINE Group ID: ${lineGroupId} - format may be invalid`);
       }
       
-      // 修改為最新的LINE API規範格式
-      let requestBody;
+      // 增加重試機制
+      const MAX_RETRIES = 2;
+      let retryCount = 0;
+      let lastError = null;
       
-      // 使用原始的push API格式
-      requestBody = {
-        to: lineGroupId,
-        messages: [
-          {
-            type: "text",
-            text: content
+      while (retryCount <= MAX_RETRIES) {
+        try {
+          // 修改為最新的LINE API規範格式
+          // 使用原始的push API格式
+          const requestBody = {
+            to: lineGroupId,
+            messages: [
+              {
+                type: "text",
+                text: content
+              }
+            ]
+          };
+          console.log(`第${retryCount + 1}次嘗試 - 使用Push訊息API`);
+          
+          console.log("發送LINE訊息requestBody:", JSON.stringify(requestBody, null, 2));
+          
+          const response = await fetch(LINE_API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(requestBody)
+          });
+          
+          // 不論是否成功都獲取響應
+          let resultText = '';
+          try {
+            resultText = await response.text();
+            console.log(`LINE API原始回應: ${resultText}`);
+          } catch (e) {
+            console.error("無法讀取回應內容:", e);
           }
-        ]
-      };
-      console.log("使用Push訊息API");
-      
-      console.log("發送LINE訊息requestBody:", JSON.stringify(requestBody, null, 2));
-      
-      const response = await fetch(LINE_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(requestBody)
-      });
-      
-      // 不論是否成功都獲取響應
-      let resultText = '';
-      try {
-        resultText = await response.text();
-        console.log(`LINE API原始回應: ${resultText}`);
-      } catch (e) {
-        console.error("無法讀取回應內容:", e);
-      }
-      
-      // 檢查回應是否為HTML格式（通常是錯誤頁面）
-      if (resultText.trim().startsWith('<!DOCTYPE') || resultText.trim().startsWith('<html')) {
-        console.error("收到HTML回應而非JSON:", resultText.substring(0, 200) + "...");
-        throw new Error("LINE API 返回了HTML頁面而非JSON，可能是TOKEN無效或API伺服器問題");
-      }
-      
-      let result;
-      try {
-        if (resultText.trim()) {
-          result = JSON.parse(resultText);
-        } else {
-          // 空回應處理
-          result = { success: true, note: "Empty response from LINE API (this is sometimes normal)" };
+          
+          // 檢查回應是否為HTML格式（通常是錯誤頁面）
+          if (resultText.trim().startsWith('<!DOCTYPE') || resultText.trim().startsWith('<html')) {
+            console.error("收到HTML回應而非JSON:", resultText.substring(0, 200) + "...");
+            throw new Error("LINE API 返回了HTML頁面而非JSON，可能是TOKEN無效或API伺服器問題");
+          }
+          
+          let result;
+          try {
+            if (resultText.trim()) {
+              result = JSON.parse(resultText);
+            } else {
+              // 空回應處理
+              result = { success: true, note: "Empty response from LINE API (this is sometimes normal)" };
+            }
+          } catch (e) {
+            console.error("無法解析JSON回應:", e);
+            console.error("原始文本:", resultText);
+            result = { raw: resultText };
+            // 不拋出錯誤，繼續處理
+          }
+          
+          if (!response.ok) {
+            console.error(`LINE API錯誤: 狀態碼=${response.status}, 訊息=${response.statusText}`);
+            console.error("LINE API錯誤詳情:", result);
+            
+            // 檢查是否為配額限制錯誤
+            if (response.status === 429) {
+              console.log(`達到LINE API配額限制，等待後重試...`);
+              retryCount++;
+              if (retryCount <= MAX_RETRIES) {
+                console.log(`等待2秒後進行第${retryCount + 1}次嘗試...`);
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 等待2秒後重試
+                continue;
+              }
+            }
+            
+            // 400錯誤處理 - 通常是LINE Bot未加入群組或群組ID錯誤
+            if (response.status === 400) {
+              // 如果是LINE群組/Bot權限問題
+              const errorMessage = `LINE API Error (${response.status}): ${result?.message || response.statusText || resultText}`;
+              console.error(`可能原因：1) LINE Bot未加入該群組 2) 群組ID錯誤 3) 無發送權限`);
+              throw new Error(errorMessage);
+            }
+            
+            throw new Error(`LINE API Error (${response.status}): ${result?.message || response.statusText || resultText}`);
+          }
+          
+          return result;
+        } catch (error) {
+          console.error(`第${retryCount + 1}次嘗試發送LINE訊息失敗:`, error);
+          lastError = error;
+          
+          // 如果不是需要重試的錯誤，直接拋出
+          if (!error.message.includes("429") && !error.message.includes("配額限制")) {
+            throw error;
+          }
+          
+          retryCount++;
+          if (retryCount <= MAX_RETRIES) {
+            const waitTime = retryCount * 2000; // 累進式等待
+            console.log(`等待${waitTime/1000}秒後進行第${retryCount + 1}次嘗試...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          } else {
+            console.error(`已達最大重試次數(${MAX_RETRIES+1}次)，無法發送訊息`);
+            throw lastError;
+          }
         }
-      } catch (e) {
-        console.error("無法解析JSON回應:", e);
-        console.error("原始文本:", resultText);
-        result = { raw: resultText };
-        // 不拋出錯誤，繼續處理
       }
       
-      if (!response.ok) {
-        console.error(`LINE API錯誤: 狀態碼=${response.status}, 訊息=${response.statusText}`);
-        console.error("LINE API錯誤詳情:", result);
-        throw new Error(`LINE API Error (${response.status}): ${result?.message || response.statusText || resultText}`);
-      }
-      
-      return result;
+      throw new Error(`在重試${MAX_RETRIES}次後仍無法發送LINE訊息: ${lastError?.message || "未知錯誤"}`);
     } catch (error) {
       console.error("Failed to send LINE message:", error);
       throw error;
