@@ -826,15 +826,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Message not found" });
       }
       
+      console.log(`處理發送訊息 ID: ${message.id}, 標題: ${message.title}, 狀態: ${message.status}`);
+      
       // Get LINE API settings
       const settings = await storage.getSettings();
       
-      if (!settings || !settings.lineApiToken) {
+      // 優先使用環境變量的TOKEN
+      const envToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+      
+      if (!settings && !envToken) {
         return res.status(400).json({ error: "LINE API Token is not configured" });
       }
       
-      // Ensure lineApiToken is not null
-      const lineApiToken = settings.lineApiToken || "";
+      // Ensure lineApiToken is not null, 優先使用環境變量
+      const lineApiToken = envToken || settings?.lineApiToken || "";
+      
+      if (!lineApiToken) {
+        return res.status(400).json({ error: "LINE API Token is not available" });
+      }
       
       // Get groups to send to
       const groups = await Promise.all(
@@ -843,11 +852,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-      const validGroups = groups.filter(g => g !== undefined) as any[];
+      const validGroups = groups.filter(g => g !== undefined) as Group[];
       
       if (validGroups.length === 0) {
         return res.status(400).json({ error: "No valid groups found for this message" });
       }
+      
+      console.log(`將訊息 ${message.id} 發送到 ${validGroups.length} 個群組:`, 
+        validGroups.map(g => `${g.name}(ID:${g.id})`).join(', '));
       
       // Format message content - add currency and amount if present
       let finalContent = message.content;
