@@ -1334,7 +1334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const groupName = event.source.groupName || "未知群組";
             
             // 檢查是否是獲取ID的命令
-            if (messageText === '#查詢ID' || messageText === '#getID') {
+            if (messageText === '查群組ID') {
               console.log(`📱 收到群組ID查詢請求，群組ID: ${groupId}`);
               
               // 回覆群組ID
