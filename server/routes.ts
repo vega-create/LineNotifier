@@ -1315,38 +1315,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // 添加臨時LINE Webhook處理 - 僅用於偶爾需要查詢群組ID
   // 這是一個獨立功能，不會影響其他群組的發送
+  
+  // 新增一個測試端點方便檢查webhook是否可訪問
+  router.get("/line-webhook-test", (req: Request, res: Response) => {
+    console.log("接收到LINE webhook測試請求");
+    res.status(200).send('LINE Webhook測試端點正常運作中');
+  });
+  
+  // LINE webhook處理
   router.post("/line-webhook-id-query", express.json(), async (req: Request, res: Response) => {
     try {
-      console.log("收到LINE Webhook查詢ID事件");
+      console.log("========== 收到LINE Webhook查詢ID事件 ==========");
+      console.log("Headers:", JSON.stringify(req.headers, null, 2));
+      console.log("Body摘要:", JSON.stringify(req.body).substring(0, 1000));
       
+      // 確保事件存在
       const events = req.body.events || [];
-      const lineApiToken = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
+      console.log(`收到 ${events.length} 個LINE事件`);
       
+      // 檢查Token
+      const lineApiToken = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
+      console.log(`LINE Token可用: ${lineApiToken.length > 0 ? '是' : '否'}`);
+      
+      // 處理所有訊息事件
       for (const event of events) {
-        // 只處理文字消息
-        if (event.type === 'message' && event.message.type === 'text') {
+        console.log(`處理事件類型: ${event.type}`);
+        
+        // 處理所有文字訊息 (不論來源)
+        if (event.type === 'message' && event.message && event.message.type === 'text') {
           const messageText = event.message.text;
-          const sourceType = event.source.type; // 'user', 'group', 'room'
+          console.log(`收到訊息: "${messageText}"`);
           
-          // 只針對群組消息
-          if (sourceType === 'group' && event.source.groupId) {
-            const groupId = event.source.groupId;
-            const groupName = event.source.groupName || "未知群組";
+          // 來源類型
+          const sourceType = event.source ? event.source.type : 'unknown';
+          console.log(`訊息來源類型: ${sourceType}`);
+          
+          // 處理所有來源的ID查詢
+          if (messageText === '查群組ID' || messageText.includes('查群組ID')) {
+            let replyId = '';
+            let sourceName = '';
             
-            // 檢查是否是獲取ID的命令
-            if (messageText === '查群組ID') {
-              console.log(`📱 收到群組ID查詢請求，群組ID: ${groupId}`);
+            // 根據來源類型獲取ID
+            if (sourceType === 'group' && event.source.groupId) {
+              replyId = event.source.groupId;
+              sourceName = '群組';
+            } else if (sourceType === 'room' && event.source.roomId) {
+              replyId = event.source.roomId;
+              sourceName = '聊天室';
+            } else if (sourceType === 'user' && event.source.userId) {
+              replyId = event.source.userId;
+              sourceName = '用戶';
+            }
+            
+            // 只要有ID就嘗試回覆
+            if (replyId) {
+              console.log(`📱 收到${sourceName}ID查詢請求，ID: ${replyId}`);
               
-              // 回覆群組ID
               try {
-                await sendLineMessage(
-                  groupId, 
-                  `📋 此群組的ID是: ${groupId}\n\n此ID可用於發送系統訊息。`, 
-                  lineApiToken
-                );
-                console.log(`✅ 已回覆群組ID查詢，群組ID: ${groupId}`);
+                // 嘗試使用回覆API (優先)
+                if (event.replyToken) {
+                  // 使用LINE的reply API
+                  const replyUrl = 'https://api.line.me/v2/bot/message/reply';
+                  const replyBody = {
+                    replyToken: event.replyToken,
+                    messages: [
+                      {
+                        type: "text",
+                        text: `📋 此${sourceName}的ID是: ${replyId}\n\n此ID可用於發送系統訊息。`
+                      }
+                    ]
+                  };
+                  
+                  console.log(`嘗試使用回覆API回應ID查詢...`);
+                  
+                  const replyResponse = await fetch(replyUrl, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "Authorization": `Bearer ${lineApiToken}`
+                    },
+                    body: JSON.stringify(replyBody)
+                  });
+                  
+                  if (replyResponse.ok) {
+                    console.log(`✅ 已使用reply API回覆ID查詢`);
+                  } else {
+                    const errorText = await replyResponse.text();
+                    console.error(`❌ reply API回覆失敗: ${replyResponse.status} - ${errorText}`);
+                    throw new Error(`Reply API失敗: ${errorText}`);
+                  }
+                } else {
+                  // 退回到使用push API
+                  await sendLineMessage(
+                    replyId, 
+                    `📋 此${sourceName}的ID是: ${replyId}\n\n此ID可用於發送系統訊息。`, 
+                    lineApiToken
+                  );
+                  console.log(`✅ 已使用push API回覆ID查詢，${sourceName}ID: ${replyId}`);
+                }
               } catch (sendError) {
-                console.error(`❌ 回覆群組ID時出錯:`, sendError);
+                console.error(`❌ 回覆ID查詢時出錯:`, sendError);
               }
             }
           }
@@ -1354,6 +1422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // LINE要求快速回應200狀態碼
+      console.log("========== 處理完成，返回200 OK ==========");
       res.status(200).send('OK');
     } catch (err) {
       console.error('處理LINE Webhook ID查詢時出錯:', err);
