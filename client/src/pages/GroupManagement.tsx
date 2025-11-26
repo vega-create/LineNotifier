@@ -52,15 +52,15 @@ export default function GroupManagement() {
   const handleAddGroup = async (data: z.infer<typeof formSchema>) => {
     try {
       await apiRequest("POST", "/api/groups", data);
-      
+
       toast({
         title: "群組已新增",
         description: "LINE群組已成功新增到系統中。",
       });
-      
+
       // Invalidate groups cache to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
-      
+
       // Close dialog and reset form
       setIsAddDialogOpen(false);
       addForm.reset();
@@ -75,18 +75,18 @@ export default function GroupManagement() {
 
   const handleEditGroup = async (data: z.infer<typeof formSchema>) => {
     if (!currentGroup) return;
-    
+
     try {
       await apiRequest("PUT", `/api/groups/${currentGroup.id}`, data);
-      
+
       toast({
         title: "群組已更新",
         description: "LINE群組資訊已成功更新。",
       });
-      
+
       // Invalidate groups cache to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
-      
+
       // Close dialog and reset form
       setIsEditDialogOpen(false);
       setCurrentGroup(null);
@@ -101,15 +101,15 @@ export default function GroupManagement() {
 
   const handleDeleteGroup = async (id: number) => {
     if (!confirm("確定要刪除此群組嗎？")) return;
-    
+
     try {
       await apiRequest("DELETE", `/api/groups/${id}`);
-      
+
       toast({
         title: "群組已刪除",
         description: "LINE群組已成功從系統中刪除。",
       });
-      
+
       // Invalidate groups cache to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
     } catch (error) {
@@ -143,7 +143,43 @@ export default function GroupManagement() {
   }
 
   return (
-    <>
+    <div className="space-y-6">
+      {/* Info Card: How to Get LINE Group ID */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex flex-col space-y-2">
+            <h3 className="text-lg font-medium text-blue-800">如何取得LINE群組ID？</h3>
+            <p className="text-sm text-blue-700">
+              現在您可以直接在LINE群組中查詢群組ID！只需在任何LINE群組中輸入以下命令：
+            </p>
+            <div className="bg-white p-3 rounded border border-blue-200 font-mono text-sm">
+              查群組ID
+            </div>
+            <p className="text-sm text-blue-700">
+              機器人將直接回覆該群組的ID，您可以複製並在此系統中使用。
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Info Card: LINE Group ID Format */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex flex-col space-y-2">
+            <h3 className="text-lg font-medium text-blue-800">LINE群組ID格式說明</h3>
+            <p className="text-sm text-blue-700">
+              LINE群組ID通常以 <span className="font-mono bg-white px-1 rounded">C</span> 開頭，長度約為33個字元。
+            </p>
+            <div className="bg-white p-3 rounded border border-blue-200 font-mono text-sm text-gray-600">
+              範例：C1234567890abcdef1234567890abcdef
+            </div>
+            <p className="text-sm text-blue-700">
+              請確保輸入的ID格式正確，否則系統將無法發送訊息到該群組。
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -195,8 +231,13 @@ export default function GroupManagement() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-10 text-gray-500">
-                      沒有找到群組資料
+                    <TableCell colSpan={3} className="text-center py-10">
+                      <div className="flex flex-col items-center space-y-2">
+                        <p className="text-gray-500">尚未新增任何群組</p>
+                        <p className="text-sm text-gray-400">
+                          點擊右上角的「新增群組」按鈕開始新增LINE群組
+                        </p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}
@@ -212,7 +253,7 @@ export default function GroupManagement() {
           <DialogHeader>
             <DialogTitle>新增LINE群組</DialogTitle>
           </DialogHeader>
-          
+
           <Form {...addForm}>
             <form onSubmit={addForm.handleSubmit(handleAddGroup)} className="space-y-4">
               <FormField
@@ -228,7 +269,7 @@ export default function GroupManagement() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={addForm.control}
                 name="lineId"
@@ -242,7 +283,7 @@ export default function GroupManagement() {
                   </FormItem>
                 )}
               />
-              
+
               <DialogFooter>
                 <Button type="submit">儲存</Button>
               </DialogFooter>
@@ -257,7 +298,7 @@ export default function GroupManagement() {
           <DialogHeader>
             <DialogTitle>編輯LINE群組</DialogTitle>
           </DialogHeader>
-          
+
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(handleEditGroup)} className="space-y-4">
               <FormField
@@ -273,7 +314,7 @@ export default function GroupManagement() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={editForm.control}
                 name="lineId"
@@ -287,7 +328,7 @@ export default function GroupManagement() {
                   </FormItem>
                 )}
               />
-              
+
               <DialogFooter>
                 <Button type="submit">更新</Button>
               </DialogFooter>
@@ -295,6 +336,6 @@ export default function GroupManagement() {
           </Form>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

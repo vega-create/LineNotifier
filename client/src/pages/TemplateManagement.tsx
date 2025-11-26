@@ -68,15 +68,15 @@ export default function TemplateManagement() {
   const handleAddTemplate = async (data: z.infer<typeof formSchema>) => {
     try {
       await apiRequest("POST", "/api/templates", data);
-      
+
       toast({
         title: "模板已新增",
         description: "訊息模板已成功新增到系統中。",
       });
-      
+
       // Invalidate templates cache to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
-      
+
       // Close dialog and reset form
       setIsAddDialogOpen(false);
       addForm.reset();
@@ -91,18 +91,18 @@ export default function TemplateManagement() {
 
   const handleEditTemplate = async (data: z.infer<typeof formSchema>) => {
     if (!currentTemplate) return;
-    
+
     try {
       await apiRequest("PUT", `/api/templates/${currentTemplate.id}`, data);
-      
+
       toast({
         title: "模板已更新",
         description: "訊息模板已成功更新。",
       });
-      
+
       // Invalidate templates cache to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
-      
+
       // Close dialog and reset form
       setIsEditDialogOpen(false);
       setCurrentTemplate(null);
@@ -117,15 +117,15 @@ export default function TemplateManagement() {
 
   const handleDeleteTemplate = async (id: number) => {
     if (!confirm("確定要刪除此模板嗎？")) return;
-    
+
     try {
       await apiRequest("DELETE", `/api/templates/${id}`);
-      
+
       toast({
         title: "模板已刪除",
         description: "訊息模板已成功從系統中刪除。",
       });
-      
+
       // Invalidate templates cache to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
     } catch (error) {
@@ -170,7 +170,28 @@ export default function TemplateManagement() {
   }
 
   return (
-    <>
+    <div className="space-y-6">
+      {/* Info Card: Template Usage */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex flex-col space-y-2">
+            <h3 className="text-lg font-medium text-blue-800">訊息模板使用說明</h3>
+            <p className="text-sm text-blue-700">
+              訊息模板可以幫助您快速建立常用的訊息內容，避免重複輸入相同的文字。建立模板後，在發送訊息時可以直接選擇套用。
+            </p>
+            <div className="bg-white p-3 rounded border border-blue-200">
+              <p className="text-sm font-medium text-gray-700 mb-1">建議的模板類型：</p>
+              <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                <li>會議提醒 - 用於通知會議時間和地點</li>
+                <li>放假通知 - 用於公告假期資訊</li>
+                <li>專案進度 - 用於更新專案狀態</li>
+                <li>款項通知 - 用於提醒付款事項</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -232,8 +253,13 @@ export default function TemplateManagement() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-10 text-gray-500">
-                      沒有找到模板資料
+                    <TableCell colSpan={4} className="text-center py-10">
+                      <div className="flex flex-col items-center space-y-2">
+                        <p className="text-gray-500">尚未新增任何模板</p>
+                        <p className="text-sm text-gray-400">
+                          點擊右上角的「新增模板」按鈕開始建立訊息模板
+                        </p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}
@@ -249,7 +275,7 @@ export default function TemplateManagement() {
           <DialogHeader>
             <DialogTitle>新增訊息模板</DialogTitle>
           </DialogHeader>
-          
+
           <Form {...addForm}>
             <form onSubmit={addForm.handleSubmit(handleAddTemplate)} className="space-y-4">
               <FormField
@@ -265,15 +291,15 @@ export default function TemplateManagement() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={addForm.control}
                 name="type"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>模板類型</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -293,7 +319,7 @@ export default function TemplateManagement() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={addForm.control}
                 name="content"
@@ -301,17 +327,17 @@ export default function TemplateManagement() {
                   <FormItem>
                     <FormLabel>訊息內容</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="輸入訊息內容" 
+                      <Textarea
+                        placeholder="輸入訊息內容"
                         className="min-h-24"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <DialogFooter>
                 <Button type="submit">儲存</Button>
               </DialogFooter>
@@ -326,7 +352,7 @@ export default function TemplateManagement() {
           <DialogHeader>
             <DialogTitle>編輯訊息模板</DialogTitle>
           </DialogHeader>
-          
+
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(handleEditTemplate)} className="space-y-4">
               <FormField
@@ -342,15 +368,15 @@ export default function TemplateManagement() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={editForm.control}
                 name="type"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>模板類型</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -370,7 +396,7 @@ export default function TemplateManagement() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={editForm.control}
                 name="content"
@@ -378,17 +404,17 @@ export default function TemplateManagement() {
                   <FormItem>
                     <FormLabel>訊息內容</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="輸入訊息內容" 
+                      <Textarea
+                        placeholder="輸入訊息內容"
                         className="min-h-24"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <DialogFooter>
                 <Button type="submit">更新</Button>
               </DialogFooter>
@@ -403,26 +429,26 @@ export default function TemplateManagement() {
           <DialogHeader>
             <DialogTitle>預覽訊息模板</DialogTitle>
           </DialogHeader>
-          
+
           {currentTemplate && (
             <div className="space-y-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-medium">模板名稱</h3>
                 <p className="text-sm">{currentTemplate.name}</p>
               </div>
-              
+
               <div className="space-y-1">
                 <h3 className="text-sm font-medium">模板類型</h3>
                 <p className="text-sm">{getTemplateTypeName(currentTemplate.type)}</p>
               </div>
-              
+
               <div className="space-y-1">
                 <h3 className="text-sm font-medium">LINE訊息內容</h3>
                 <div className="bg-[#F0F0F0] p-4 rounded-lg space-y-2">
                   <p className="text-sm whitespace-pre-line">{currentTemplate.content}</p>
                 </div>
               </div>
-              
+
               <DialogFooter>
                 <Button onClick={() => setIsPreviewDialogOpen(false)}>關閉</Button>
               </DialogFooter>
@@ -430,6 +456,6 @@ export default function TemplateManagement() {
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
