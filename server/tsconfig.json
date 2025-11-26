@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ESNext",
+    "outDir": "../dist/server",
+    "allowJs": false,
+    "noEmit": false,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../shared/**/*"],
+  "exclude": ["node_modules"]
+}
