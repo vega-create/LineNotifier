@@ -1,5 +1,5 @@
 import { apiRequest } from "./queryClient";
-import { Group, Template, Message, Settings } from "@shared/schema";
+import { Group, Template, Message, Settings } from "@shared/types";
 
 export const api = {
   // Group endpoints
