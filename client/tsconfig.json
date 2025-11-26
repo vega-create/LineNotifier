@@ -5,5 +5,5 @@
     "types": ["node", "vite/client"]
   },
   "include": ["src/**/*", "../shared/**/*"],
-  "exclude": ["../server", "node_modules"]
+  "exclude": ["../server", "../dist", "../node_modules"]
 }
