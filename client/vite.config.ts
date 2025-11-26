@@ -7,17 +7,21 @@ import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-      "@shared": path.resolve(__dirname, "../shared"),
+export default defineConfig(async () => {
+  const shadcnThemeJson = await import("@replit/vite-plugin-shadcn-theme-json");
+
+  return {
+    plugins: [react(), shadcnThemeJson.default()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "src"),
+        "@shared": path.resolve(__dirname, "../shared"),
+      },
     },
-  },
-  root: __dirname,
-  build: {
-    outDir: "dist",
-    emptyOutDir: true,
-  },
+    root: __dirname,
+    build: {
+      outDir: "dist",
+      emptyOutDir: true,
+    },
+  };
 });
