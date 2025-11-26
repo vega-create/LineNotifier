@@ -7,7 +7,7 @@ export const queryClient = new QueryClient();
 
 // API Base URL
 const BASE_URL =
-  import.meta.env.VITE_API_URL?.replace(/\/$/, "") || ""; // 去掉尾端斜線避免 //api
+  import.meta.env.VITE_API_BASE?.replace(/\/$/, "") || ""; // 去掉尾端斜線避免 //api
 
 // 封裝 API 請求方法
 export async function apiRequest(
