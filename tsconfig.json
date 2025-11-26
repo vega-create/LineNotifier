@@ -1,23 +1,42 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
-    "noEmit": true,
+
+    "target": "ESNext",
     "module": "ESNext",
+    "moduleResolution": "bundler",
+
     "strict": true,
+    "noEmit": true,
+
     "lib": ["esnext", "dom", "dom.iterable"],
-    "jsx": "preserve",
+    "jsx": "react-jsx",
+
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
-    "moduleResolution": "bundler",
+
     "baseUrl": ".",
     "types": ["node", "vite/client"],
+
     "paths": {
-      "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@/*": ["client/src/*"],
+      "@shared/*": ["shared/*"],
+      "@assets/*": ["attached_assets/*"]
     }
-  }
+  },
+
+  "include": [
+    "client/src/**/*",
+    "shared/**/*"
+  ],
+
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "server",     // ❗不要讓前端 tsconfig 解析 server
+    "**/*.test.ts"
+  ]
 }
