@@ -9,9 +9,9 @@ export const groups = pgTable("groups", {
   lineId: text("line_id").notNull().unique(),
 });
 
-export const insertGroupSchema = createInsertSchema(groups).pick({
-  name: true,
-  lineId: true,
+export const insertGroupSchema = z.object({
+  name: z.string().min(1, "Group name is required"),
+  lineId: z.string().min(1, "LINE ID is required"),
 });
 
 // Message Template schema
@@ -22,10 +22,10 @@ export const templates = pgTable("templates", {
   type: text("type").notNull(), // e.g., 'meeting', 'holiday', 'project'
 });
 
-export const insertTemplateSchema = createInsertSchema(templates).pick({
-  name: true,
-  content: true,
-  type: true,
+export const insertTemplateSchema = z.object({
+  name: z.string().min(1, "Template name is required"),
+  content: z.string().min(1, "Content is required"),
+  type: z.string().min(1, "Type is required"),
 });
 
 // Message schema - 使用字符串表示日期，這樣更容易與前端交互
@@ -41,7 +41,7 @@ export const messages = pgTable("messages", {
   groupIds: text("group_ids").array().notNull(), // Array of group IDs
   currency: text("currency"), // 'TWD', 'AUD', 'USD'
   amount: text("amount"), // 金額
-  
+
   // 週期性發送相關字段
   recurringType: text("recurring_type"), // 'daily', 'weekly', 'monthly', 'yearly'
   lastSent: text("last_sent"), // 上次發送時間，用於計算下次發送時間
@@ -59,7 +59,7 @@ export const insertMessageSchema = z.object({
   groupIds: z.array(z.string()),
   currency: z.string().nullable().optional(),
   amount: z.string().nullable().optional(),
-  
+
   // 週期性發送相關字段
   recurringType: z.enum(['daily', 'weekly', 'monthly', 'yearly']).nullable().optional(),
   lastSent: z.string().nullable().optional(),
@@ -76,11 +76,11 @@ export const settings = pgTable("settings", {
 });
 
 // 直接使用基本schema
-export const insertSettingsSchema = createInsertSchema(settings).pick({
-  lineApiToken: true,
-  lineChannelSecret: true,
-  lastSynced: true,
-  isConnected: true,
+export const insertSettingsSchema = z.object({
+  lineApiToken: z.string().optional(),
+  lineChannelSecret: z.string().optional(),
+  lastSynced: z.string().optional(),
+  isConnected: z.boolean().default(false),
 });
 
 // Type definitions
@@ -109,7 +109,7 @@ export type MessageFormData = {
   endTime: string;
   currency?: string; // 'TWD', 'AUD', 'USD'
   amount?: string; // 金額
-  
+
   // 週期性發送選項
   recurringType?: 'daily' | 'weekly' | 'monthly' | 'yearly';
   recurringActive?: boolean;
