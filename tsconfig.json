@@ -1,25 +1,15 @@
 {
   "compilerOptions": {
-    "incremental": true,
-    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
-
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
 
     "strict": true,
-    "noEmit": true,
-
-    "lib": ["esnext", "dom", "dom.iterable"],
-    "jsx": "react-jsx",
-
-    "esModuleInterop": true,
     "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
 
     "baseUrl": ".",
-    "types": ["node", "vite/client"],
-
     "paths": {
       "@/*": ["client/src/*"],
       "@shared/*": ["shared/*"],
@@ -27,16 +17,5 @@
     }
   },
 
-  "include": [
-    "client/src/**/*",
-    "shared/**/*"
-  ],
-
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build",
-    "server",     // ❗不要讓前端 tsconfig 解析 server
-    "**/*.test.ts"
-  ]
+  "exclude": ["node_modules", "dist", "build"]
 }
