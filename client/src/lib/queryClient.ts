@@ -1,82 +1,31 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+// client/src/lib/queryClient.ts
 
-async function throwIfResNotOk(res: Response) {
-  // 204 No Content 表示成功但無內容返回（常用於DELETE操作）
-  if (res.status === 204) {
-    return;
-  }
-  
-  if (!res.ok) {
-    // 嘗試讀取響應內容，如果為空則使用狀態文本
-    let text;
-    try {
-      text = await res.text();
-    } catch (e) {
-      text = res.statusText;
-    }
-    throw new Error(`${res.status}: ${text || res.statusText}`);
-  }
-}
+const BASE_URL =
+  import.meta.env.VITE_API_URL?.replace(/\/$/, "") || ""; // 去掉尾端斜線避免 //api
 
-export async function apiRequest<T = any>(
+export async function apiRequest(
   method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<T> {
-  const res = await fetch(url, {
+  path: string,
+  data?: any
+): Promise<Response> {
+  const url = `${BASE_URL}${path}`;
+
+  const options: RequestInit = {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  await throwIfResNotOk(res);
-  
-  // 處理204狀態碼（無內容）
-  if (res.status === 204) {
-    return { success: true } as unknown as T;
-  }
-  
-  // 嘗試解析JSON響應
-  try {
-    const responseData = await res.json();
-    return responseData as T;
-  } catch (error) {
-    // 如果無法解析JSON，返回空對象
-    console.warn("無法解析JSON響應:", error);
-    return { success: true } as unknown as T;
-  }
-}
-
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
-
-    await throwIfResNotOk(res);
-    return await res.json();
+    headers: { "Content-Type": "application/json" },
   };
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
-    },
-    mutations: {
-      retry: false,
-    },
-  },
-});
+  if (data) {
+    options.body = JSON.stringify(data);
+  }
+
+  const res = await fetch(url, options);
+
+  // 自動處理 4xx / 5xx 的錯誤（讓你前端 UI 顯示錯誤）
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`API Error ${res.status}: ${errorText}`);
+  }
+
+  return res;
+}
