@@ -3,14 +3,17 @@ import { dirname, join } from "path";
 import "./initTables"; // 系統啟動時建立資料表
 
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(express.static(join(__dirname, "../public")));
 
 // 簡單的後端 log function（避免使用 Vite 的 log）
 function log(message: string) {
