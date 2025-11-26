@@ -4,10 +4,9 @@
     "module": "ESNext",
     "target": "ESNext",
     "outDir": "../dist/server",
-    "allowJs": false,
-    "noEmit": false,
-    "types": ["node"]
+    "types": ["node"],
+    "noEmit": false
   },
   "include": ["**/*.ts", "../shared/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["../client"]
 }
