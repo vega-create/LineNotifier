@@ -1,8 +1,10 @@
-import { drizzle } from "drizzle-orm/sqlite";
-import { Database } from "sqlite3";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 
-// SQLite 資料庫檔案 (本地端)
-const sqlite = new Database("sqlite.db");
+// Render / GitHub 上設定 DATABASE_URL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
-export const db = drizzle(sqlite, { schema });
+export const db = drizzle(pool, { schema });
