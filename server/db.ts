@@ -1,13 +1,8 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { drizzle } from "drizzle-orm/sqlite";
+import { Database } from "sqlite3";
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
+// SQLite 資料庫檔案 (本地端)
+const sqlite = new Database("sqlite.db");
 
-  console.warn("DATABASE_URL not set, using default development URL");
-  process.env.DATABASE_URL = "postgres://postgres:postgres@localhost:5432/dev";
-}
-
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+export const db = drizzle(sqlite, { schema });
